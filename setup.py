@@ -31,6 +31,11 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     entry_points={
+        'pytest11': [
+            'looptime_plugin = looptime.plugin',
+            'looptime_timeproxies = looptime.timeproxies',
+            'looptime_chronometers = looptime.chronometers',
+        ]
     },
 
     python_requires='>=3.7',
@@ -38,6 +43,7 @@ setup(
         'setuptools_scm',
     ],
     install_requires=[
+        # 'pytest',
     ],
-    package_data={"pytest_instant": ["py.typed"]},
+    package_data={"looptime": ["py.typed"]},
 )

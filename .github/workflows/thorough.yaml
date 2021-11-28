@@ -20,7 +20,7 @@ jobs:
           python-version: "3.10"
       - run: pip install -r requirements.txt
       - run: pre-commit run --all-files
-      - run: mypy pytest_instant --strict
+      - run: mypy looptime --strict
 
   unit-tests:
     strategy:
@@ -38,7 +38,7 @@ jobs:
 
       - run: pip install -r requirements.txt
       - run: pip install -e .
-      - run: pytest --color=yes --cov=pytest_instant --cov-branch
+      - run: pytest --color=yes --cov=looptime --cov-branch
 
       - name: Publish coverage to Coveralls.io
         if: success()
