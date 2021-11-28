@@ -1,0 +1,86 @@
+name: CI
+on:
+  pull_request:
+    branches:
+      - main
+      - release/**
+  workflow_dispatch: {}
+
+jobs:
+  linters:
+    name: Linting and static analysis
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+      - run: pip install -r requirements.txt
+      - run: pre-commit run --all-files
+      - run: mypy pytest_instant --strict
+
+  unit-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: pip install -r requirements.txt
+      - run: pip install -e .
+      - run: pytest --color=yes --cov=pytest_instant --cov-branch
+
+      - name: Publish coverage to Coveralls.io
+        if: success()
+        run: coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+        continue-on-error: true
+      - name: Publish coverage to CodeCov.io
+        uses: codecov/codecov-action@v1
+        if: success()
+        env:
+          PYTHON: ${{ matrix.python-version }}
+        with:
+          flags: unit
+          env_vars: PYTHON
+        continue-on-error: true
+
+  # No coverage: PyPy performs extremely poorly with tracing/coverage.
+  pypy-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "pypy-3.7", "pypy-3.8" ]
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: pip install -r requirements.txt
+      - run: pip install -e .
+      - run: pytest --color=yes --no-cov
+
+  coveralls-finish:
+    name: Finalize coveralls.io
+    needs: [unit-tests]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/setup-python@v2
+      - run: pip install coveralls
+      - run: coveralls --service=github --finish
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+        continue-on-error: true

@@ -1,0 +1,15 @@
+# Everything needed to develop (test, debug) the framework.
+# The runtime dependencies of the framework, as if via `pip install kopf`.
+-e .
+async-timeout
+codecov
+coverage
+coveralls
+isort
+pre-commit
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+# Mypy requires typed-ast, which is broken on PyPy 3.7 (could work in PyPy 3.8).
+mypy==0.910; implementation_name == "cpython"
