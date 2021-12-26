@@ -23,7 +23,7 @@ The effects of time removal can be seen from both sides:
   all activities of the event loop, such as sleeps, events/conditions waits,
   timeouts, "later" callbacks, happen in near-zero amount of the real time
   (above the usual code overhead).
-  This speeds up the tests execution without breaking the tests' time-based
+  This speeds up the execution of tests without breaking the tests' time-based
   design, even if they are designed to run in seconds or minutes.
 
 For the latter case, there are a few exceptions when the event loop's activities
@@ -65,8 +65,8 @@ In textbook cases with simple coroutines that are more like regular functions,
 it is possible to design a test so that it runs straight to the end in one hop
 — with all the preconditions set and data prepared in advance in the test setup.
 
-However, in the real-world cases, the tests often must verify that
-the corotuine stops at some point, waits for a condition for some limited time,
+However, in real-world cases, the tests often must verify that
+the coroutine stops at some point, waits for a condition for some limited time,
 and then passes or fails.
 
 The problem is often "solved" by mocking the low-level coroutines of sleep/wait
@@ -77,8 +77,8 @@ of how the coroutine is implemented internally, which can change over time.
 Good tests do not change on refactoring if the protocol remains the same.
 
 Another (straightforward) approach is to not mock the low-level routines, but
-to spend the real-world time, just in short bursts as hard-cded in the test.
-Not only it makes the whole test-suite slower, it also brings the exection
+to spend the real-world time, just in short bursts as hard-coded in the test.
+Not only it makes the whole test-suite slower, it also brings the execution
 time close to the values where the code overhead affects the timing
 and makes it difficult to assert on the coroutine's pure time.
 
@@ -107,7 +107,7 @@ pip install pytest-asyncio
 pip install looptime
 ```
 
-Nothing is needed to make async tests to run with the fake time, it just works:
+Nothing is needed to make async tests run with the fake time, it just works:
 
 ```python
 import asyncio
@@ -203,14 +203,14 @@ for each setting separately (i.e. not the closest marker as a whole).
 marked as using the fake loop time —including those not marked at all—
 as if all tests were implicitly marked.
 
-`--no-looptime` runs all tests —both marked and unmarked— with real time.
+`--no-looptime` runs all tests —both marked and unmarked— with the real time.
 This flag effectively disables the plugin.
 
 
 ## Settings
 
 The marker accepts several settings for the test. The closest to the test
-function applies. This lets you to define the test-suite defaults
+function applies. This lets you define the test-suite defaults
 and override them on the directory, module, class, function, or test level:
 
 ```python
@@ -232,7 +232,7 @@ async def test_me():
 `start` (`float` or `None`, or a no-argument callable that returns the same)
 is the initial time of the event loop.
 
-If it is a callable, it is invoked once per event loop to get the value:
+If it is callable, it is invoked once per event loop to get the value:
 e.g. `start=time.monotonic` to align with the true time,
 or `start=lambda: random.random() * 100` to add some unpredictability.
 
@@ -286,7 +286,7 @@ Normally, it should not fail. However, with fake time (without workarounds)
 the following scenario is possible:
 
 * `async_timeout` library sets its delayed timer at 9 seconds since now.
-* the event loop notices that there is and and only one timer at T0+9s.
+* the event loop notices that there is only one timer at T0+9s.
 * the event loop fast-forwards time to be `9`.
 * since there are no other handles/timers, that timer is executed.
 * `async_timeout` fails the test with `asyncio.TimeoutError`
@@ -341,11 +341,11 @@ However, with the fake time (with no workarounds), the following happens:
 * The test suppresses the timeout, checks the assertion, and fails:
   the sync event is still unset.
 * A fraction of a second (e.g. `0.001` second) later, the thread starts,
-  calls the function, and sets the sync event, but it is too late.
+  calls the function and sets the sync event, but it is too late.
 
 Compared to the fake fast-forwarding time, even such fast things as threads
 are too slow to start. Unfortunately, `looptime` and the event loop can
-neither control what is happening outside of the event loop, nor predict
+neither control what is happening outside of the event loop nor predict
 how long it will take.
 
 To work around this, `looptime` remembers all calls to executors and then
@@ -357,11 +357,11 @@ So, the fake time and real time move along while waiting for executors.
 Luckily for this case, in 1 or 2 such steps, the executor's thread will
 do its job, the event will be set, so as the synchronous & asynchronous
 futures of the executor. The latter one (the async future) will also
-let the `await` to move on.
+let the `await` move on.
 
 The `idle_step` (`float` or `None`) setting is the duration of a single
 time step when fast-forwarding the time if there are executors used —
-i.e. if there are some synchronous tasks running in the thread pools.
+i.e. if some synchronous tasks are running in the thread pools.
 
 Note that the steps are both true-time and fake-time: they spend the same
 amount of the observer's true time as they increment the loop's fake time.
@@ -395,7 +395,7 @@ With no workarounds, the test will hang forever waiting for the i/o to happen.
 This mostly happens when the only thing left in the event loop is the i/o,
 all internal scheduled callbacks are gone.
 
-`looptime` can artifically limit the lifetime of the event loop.
+`looptime` can artificially limit the lifetime of the event loop.
 This can be done as a default setting for the whole test suite, for example.
 
 The `idle_timeout` (`float` or `None`) setting is the true-time limit
@@ -441,7 +441,7 @@ while `looptime(end=N)` applies to the lifecycle of the whole event loop,
 which is usually the duration of the whole test and monotonically increases.
 
 Second, `looptime(end=N)` syncs the loop time with the real time for N seconds,
-i.e. it does not instantly fast-forwards the loop time when the loops
+i.e. it does not instantly fast-forward the loop time when the loops
 attempts to make an "infinite sleep" (technically, `selector.select(None)`).
 `async_timeout.timeout()` and `asyncio.wait_for()` set a delayed callback,
 so the time fast-forwards to it on the first possible occasion.
@@ -560,7 +560,7 @@ async def test_me(chronometer, event_loop):
 
 ### Loop time assertions
 
-The `looptime` **fixture** is a syntax sugar for easy loop time assertions::
+The `looptime` **fixture** is syntax sugar for easy loop time assertions::
 
 ```python
 import asyncio
@@ -575,13 +575,13 @@ async def test_me(looptime):
 
 Technically, it is a proxy object to `asyncio.get_running_loop().time()`.
 The proxy object supports the direct comparison with numbers (integers/floats),
-so as some basic arithmetics (adding, substracting, multiplication, etc).
+so as some basic arithmetics (adding, subtracting, multiplication, etc).
 However, it adjusts to the time precision of 1 nanosecond (1e-9): every digit
 beyond that precision is ignored — so you can be not afraid of
 `123.456/1.2` suddenly becoming `102.88000000000001` and not equal to `102.88`
 (as long as the time proxy object is used and not converted to a native float).
 
-The proxy object can be used to create a new proxy which is bound to a specific
+The proxy object can be used to create a new proxy that is bound to a specific
 event loop (it works for loops both with fake- and real-world time)::
 
 ```python
