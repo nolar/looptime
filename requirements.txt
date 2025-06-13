@@ -6,7 +6,7 @@ codecov
 coverage
 coveralls
 isort
-mypy==0.920
+mypy==1.16.0
 pre-commit
 pytest
 pytest-asyncio<1.0.0
