@@ -8,7 +8,7 @@ import pytest
 from looptime import loops, patchers
 
 
-@pytest.hookimpl(hookwrapper=True)  # type: ignore
+@pytest.hookimpl(hookwrapper=True)
 def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:
     if fixturedef.argname == "event_loop":
         result = yield

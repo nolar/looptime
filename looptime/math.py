@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+from typing import Any
 
 
 class Numeric(metaclass=abc.ABCMeta):
@@ -108,5 +109,6 @@ class Numeric(metaclass=abc.ABCMeta):
         else:
             return NotImplemented
 
-    def __pow__(self, power: float, modulo: None = None) -> float:
+    # See the StdLib's comments on pow() on why it is Any, not float.
+    def __pow__(self, power: float, modulo: None = None) -> Any:
         return pow(round(self._value * self.__rr), power, modulo) / pow(self.__rr, power, modulo)

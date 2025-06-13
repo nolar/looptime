@@ -9,13 +9,13 @@ on:
 jobs:
   linters:
     name: Linting and static analysis
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.13"
       - run: pip install -r requirements.txt
       - run: pre-commit run --all-files
       - run: mypy looptime --strict
@@ -24,13 +24,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -45,7 +45,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github_token }}
         continue-on-error: true
       - name: Publish coverage to CodeCov.io
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         if: success()
         env:
           PYTHON: ${{ matrix.python-version }}
@@ -59,13 +59,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "pypy-3.7", "pypy-3.8" ]
+        python-version: [ "pypy-3.9", "pypy-3.10", "pypy-3.11" ]
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -76,9 +76,9 @@ jobs:
   coveralls-finish:
     name: Finalize coveralls.io
     needs: [unit-tests]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
       - run: pip install coveralls
       - run: coveralls --service=github --finish
         env:
