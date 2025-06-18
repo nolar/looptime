@@ -9,6 +9,7 @@ class LoopTimeProxy(math.Numeric):
     """
     A numeric-compatible proxy to the time of the current/specific event loop.
     """
+    zero: float  # mutable! where our "time zero" is in the monotonic loop time.
 
     def __init__(
             self,
@@ -18,6 +19,7 @@ class LoopTimeProxy(math.Numeric):
     ) -> None:
         super().__init__(resolution=resolution)
         self._loop = loop
+        self.zero = 0
 
     def __repr__(self) -> str:
         return f"<Loop time: {self._value}>"
@@ -30,14 +32,5 @@ class LoopTimeProxy(math.Numeric):
 
     @property
     def _value(self) -> float:
-        return self._loop.time() if self._loop is not None else asyncio.get_running_loop().time()
-
-
-try:
-    import pytest
-except ImportError:
-    pass
-else:
-    @pytest.fixture()
-    def looptime() -> LoopTimeProxy:
-        return LoopTimeProxy()
+        loop = self._loop if self._loop is not None else asyncio.get_running_loop()
+        return loop.time() - self.zero
