@@ -5,7 +5,12 @@ from typing import Any, cast
 
 import pytest
 
-from looptime import loops, patchers
+from looptime import loops, patchers, timeproxies
+
+
+@pytest.fixture()
+def looptime() -> timeproxies.LoopTimeProxy:
+    return timeproxies.LoopTimeProxy()
 
 
 def pytest_configure(config: Any) -> None:

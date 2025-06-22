@@ -31,13 +31,3 @@ class LoopTimeProxy(math.Numeric):
     @property
     def _value(self) -> float:
         return self._loop.time() if self._loop is not None else asyncio.get_running_loop().time()
-
-
-try:
-    import pytest
-except ImportError:
-    pass
-else:
-    @pytest.fixture()
-    def looptime() -> LoopTimeProxy:
-        return LoopTimeProxy()
