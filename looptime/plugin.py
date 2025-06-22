@@ -25,12 +25,13 @@ def pytest_addoption(parser: Any) -> None:
                     help="Run unmarked tests with the fake loop time by default.")
 
 
-@pytest.hookimpl(hookwrapper=True)
+@pytest.hookimpl(wrapper=True)
 def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:
+    result = yield
+
     if fixturedef.argname == "event_loop":
-        result = yield
-        loop = cast(asyncio.BaseEventLoop, result.get_result()) if result.excinfo is None else None
-        if loop is not None and not isinstance(loop, loops.LoopTimeEventLoop):
+        loop = cast(asyncio.BaseEventLoop, result)
+        if not isinstance(loop, loops.LoopTimeEventLoop):
 
             # True means implicitly on; False means explicitly off; None means "only if marked".
             option: bool | None = request.config.getoption('looptime')
@@ -45,6 +46,6 @@ def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:
             if enabled:
                 patched_loop = patchers.patch_event_loop(loop)
                 patched_loop.setup_looptime(**options)
-                result.force_result(patched_loop)
-    else:
-        yield
+                result = patched_loop
+
+    return result
