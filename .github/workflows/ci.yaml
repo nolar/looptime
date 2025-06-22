@@ -24,8 +24,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
-    name: Python ${{ matrix.python-version }}
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+        include:
+          - python-version: "3.13"
+          - python-version: "3.13"
+            install-extras: "pytest-asyncio<1.0.0"
+    name: Python ${{ matrix.python-version }}${{ matrix.install-extras && ', ' || '' }}${{ matrix.install-extras }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -36,6 +40,8 @@ jobs:
 
       - run: pip install -r requirements.txt
       - run: pip install -e .
+      - run: pip install "${{ matrix.install-extras }}"
+        if: ${{ matrix.install-extras }}
       - run: pytest --color=yes --cov=looptime --cov-branch
 
       - name: Publish coverage to Coveralls.io
