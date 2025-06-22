@@ -88,22 +88,24 @@ Therefore, we patch ALL the implicit event loops of pytest-asyncio, regardless
 of whether they are supposed to be used or not. They are disabled (inactive)
 initally, i.e. their time flows normally, using the wall-clock (true) time.
 
-We then activate the looptime magic on demand for those tests that need it,
-and only when needed (i.e. when requested/configured/marked).
+We then activate the looptime magic on demand for those tests & those scopes
+that need it, and only when needed (i.e. when requested/configured/marked).
 
-We only activate the time magic on the running loop of the test, and only
-during the test execution. We do not compact the time of the event loops
-used in fixtures, even when the fixtures use the same-scoped event loop.
-
-(This might be a breaking change. See the assumptions above for the rationale.)
+Previously, the event loops remained unpatched if looptime was not enabled
+on a test.
 
 Even for the lowest "function" scope, we cannot patch-and-activate it only once
 at creation, since at the time of the event loop setup (creation),
 we do not know which event loop will be the running loop of the test.
-This affects to which loop the configured options should be applied.
+This affects which options to apply:
 
-We only know this when we reach the test.
-We then apply the options, and activate the pre-patched running event loop.
+- One of the named scoped (session-package-module-class-function);
+- ``None`` as the pseudo-scope for the running loop.
+
+We only know this when we reach the test. We then combine the options, apply,
+and activate the patched event loop.
+
+
 """
 from __future__ import annotations
 
@@ -240,19 +242,43 @@ def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> Any:
     else: # not pytest-asyncio? not our business!
         return (yield)
 
+    # TODO: take the global flags into account? do not activate with --no-looptime!
+    #           but do activate with --looptime or looptime=true.
+    #       in this code, we activate regardless of global options — not good.
+    # For ALL involved fixtures (incl. hidden & auto-used), apply or re-apply their scoped options.
+    # The scopes of fixtures are remembered in the session stash when the fixtures are set up.
+    # (There is `pyfuncitem._fixtureinfo.name2fixturedefs`, but it holds no FixtureDefs or scopes.)
+    # NB: function-scoped event loops will be set up twice; this is fine — to make the code generic:
+    # - First, in the fixture hook — with no options, when patched at creation.
+    # - Second, here, in the test hook – with specific options.
+    # This might be the 2nd setup of a function-scoped fixture, now with specific options.
+    # For higher-scoped fixtures, this step can be repeated for every test again and again.
+    scoped_options: dict[str | None, dict[str, Any]] = _get_options(pyfuncitem)
+    event_loop_fixture_scopes: EventLoopScopes = pyfuncitem.session.stash.get(EVENT_LOOP_SCOPES, {})
+    for fixture_name, fixture_value in funcargs.items():
+        if isinstance(fixture_value, loops.LoopTimeEventLoop):
+            if fixture_name in event_loop_fixture_scopes:
+                scope: str = event_loop_fixture_scopes[fixture_name][-1]
+                options: dict[str, Any] = {}
+                if scope in scoped_options:
+                    options.update(scoped_options[scope])
+                if None in scoped_options and fixture_value is running_loop:
+                    options.update(scoped_options[None])
+                fixture_value.setup_looptime(**options)
+
     # The event loop is not patched? We are doomed to fail, so let it run somehow on its own.
     # This might happen if the custom event loop policy was set not by pytest-asyncio.
     if not isinstance(running_loop, loops.LoopTimeEventLoop):
         return (yield)
 
     # If not enabled/enforced for this test, even if the event loop is patched, let it run as usual.
-    options: dict[str, Any] | None = _get_options(pyfuncitem)
-    if options is None:
+    enabled = None in scoped_options
+    if not enabled:
         return (yield)
 
     # Finally, if enabled/enforced, activate the magic and run the test in the compacted time mode.
     # We only activate the running loop for the test, not the other event loops used in fixtures.
-    running_loop.setup_looptime(**options)
+    running_loop.setup_looptime(**scoped_options[None])
     with running_loop.looptime_enabled():
         return (yield)
 
@@ -300,17 +326,39 @@ def _is_fixture(obj: Any) -> bool:
     return False
 
 
-def _get_options(node: _pytest.nodes.Node) -> dict[str, Any] | None:
-    """Combine all the declared looptime options; None for disabled."""
+def _get_options(node: _pytest.nodes.Node) -> dict[str | None, dict[str, Any]]:
+    """
+    Combine all the declared looptime options, grouped by loop scope.
+
+    The loop scope ``None`` is used when the loop scope is not defined,
+    and this means the running event loop — regardless of which scope it is
+    (typically equal to pytest-asyncio's ``loop_scope`` of the test).
+    """
+    markers = list(node.iter_markers('looptime'))
+    enabled: dict[str | None, bool] = {}
+    options: dict[str | None, dict[str, Any]] = {}
+    for marker in reversed(markers):
+        # Accumulate the scope-related options separately, override with the closest markers.
+        # The loop scope None means the running loop, which can vary, and is interpreted separately.
+        loop_scope: str | None = marker.kwargs.pop('loop_scope', None)
+        if loop_scope not in options:
+            options[loop_scope] = {}
+        options[loop_scope].update(marker.kwargs)
+
+        # Positional args enable/disable that loop scope, but do not reset the accumulated options.
+        if marker.args:
+            enabled[loop_scope] = bool(marker.args[0])
 
     # True means implicitly on; False means explicitly off; None means "only if marked".
     flag: bool | None = node.config.getoption('looptime')
 
-    markers = list(node.iter_markers('looptime'))
-    enabled: bool = bool((markers or flag is True) and not flag is False)
-    options: dict[str, Any] = {}
-    for marker in reversed(markers):
-        options.update(marker.kwargs)
-        enabled = bool(marker.args[0]) if marker.args else enabled
+    # Drop the options for scopes that are disabled with the markers, as if there are no markers.
+    # Ensure the scopes that are not marked if there is a global flag to auto-enable looptime.
+    scopes = ['session', 'package', 'module', 'class', 'function', None]
+    options = {
+        scope: options.get(scope, {})
+        for scope in scopes
+        if enabled.get(scope, (scope in options or flag is True) and flag is not False)
+    }
 
-    return options if enabled else None
+    return options
