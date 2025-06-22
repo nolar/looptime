@@ -1,5 +1,6 @@
 import asyncio
 import time
+import warnings
 
 import async_timeout
 import pytest
@@ -134,3 +135,31 @@ def test_floating_point_precision_fixed(looptime_loop, start, sleep, expected_ti
 
     looptime_loop.run_until_complete(f())
     assert looptime_loop.time() == expected_time
+
+
+def test_repeated_setup_keeps_the_time(looptime_loop):
+    looptime_loop.setup_looptime(start=123)
+    looptime_loop.setup_looptime()
+    assert looptime_loop.time() == 123  # not zero
+
+
+def test_forward_time_moves_works(looptime_loop):
+    looptime_loop.setup_looptime(start=123)
+    looptime_loop.setup_looptime(start=456)
+    assert looptime_loop.time() == 456
+
+
+def test_backward_time_moves_warns(looptime_loop):
+    looptime_loop.setup_looptime(start=456)
+    with pytest.warns(looptime.TimeWarning, match=r"from 456.0 to 123.0"):
+        looptime_loop.setup_looptime(start=123)
+    assert looptime_loop.time() == 123  # modified
+
+
+def test_backward_time_moves_raises_and_keeps_the_time(looptime_loop):
+    looptime_loop.setup_looptime(start=456)
+    with pytest.raises(looptime.TimeWarning):
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error', category=looptime.TimeWarning)
+            looptime_loop.setup_looptime(start=123)
+    assert looptime_loop.time() == 456  # unmodified

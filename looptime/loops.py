@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import selectors
 import time
+import warnings
 import weakref
 from typing import TYPE_CHECKING, Any, Callable, Iterator, MutableSet, TypeVar, cast, overload
 
@@ -15,6 +16,11 @@ if TYPE_CHECKING:
 else:
     AnyFuture = asyncio.Future
     AnyTask = asyncio.Task
+
+
+class TimeWarning(UserWarning):
+    """Issued when the loop time moves backwards, violating its monotonicity."""
+    pass
 
 
 class LoopTimeoutError(asyncio.TimeoutError):
@@ -71,9 +77,33 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         when the mixin/class is injected into the existing event loop object.
         In that case, the object is already initialised except for these fields.
         """
+        new_time: float | None = start() if callable(start) else start
+        end_time: float | None = end() if callable(end) else end
+        old_time: float | None
+        try:
+            # NB: using the existing (old) reciprocal!
+            old_time = self.__int2time(self.__now)
+        except AttributeError:  # initial setup: either reciprocals or __now are absent
+            old_time = None
+        new_time = float(new_time) if new_time is not None else None
+
+        # If it is the 2nd or later setup, double-check on time monotonicity.
+        # In some configurations, this waring might raise an error and fail the test.
+        # In that case, the time must not be changed for the next test.
+        if old_time is not None and new_time is not None and new_time < old_time:
+            warnings.warn(
+                f"The time of the event loop moves backwards from {old_time} to {new_time},"
+                " thus breaking the monotonicity of time. This is dangerous!"
+                " Perhaps, caused by reusing a higher-scope event loop in tests."
+                " Revise the scopes of fixtures & event loops."
+                " Remove the start=… kwarg and rely on arbitrary time values."
+                " Migrate from `loop.time()` to the `looptime` numeric fixture.",
+                TimeWarning,
+            )
+
         self.__resolution_reciprocal: int = round(1/resolution)
-        self.__now: int = self.__time2int(start() if callable(start) else start) or 0
-        self.__end: int | None = self.__time2int(end() if callable(end) else end)
+        self.__now: int = self.__time2int(new_time or old_time) or 0
+        self.__end: int | None = self.__time2int(end_time)
 
         self.__idle_timeout: int | None = self.__time2int(idle_timeout)
         self.__idle_step: int | None = self.__time2int(idle_step)
