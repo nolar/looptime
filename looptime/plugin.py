@@ -8,6 +8,18 @@ import pytest
 from looptime import loops, patchers
 
 
+def pytest_configure(config: Any) -> None:
+    config.addinivalue_line('markers', "looptime: configure the fake fast-forwarding loop time.")
+
+
+def pytest_addoption(parser: Any) -> None:
+    group = parser.getgroup("asyncio time contraction")
+    group.addoption("--no-looptime", dest='looptime', action="store_const", const=False,
+                    help="Force all (even marked) tests to the true loop time.")
+    group.addoption("--looptime", dest='looptime', action="store_const", const=True,
+                    help="Run unmarked tests with the fake loop time by default.")
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:
     if fixturedef.argname == "event_loop":
@@ -31,15 +43,3 @@ def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:
                 result.force_result(patched_loop)
     else:
         yield
-
-
-def pytest_configure(config: Any) -> None:
-    config.addinivalue_line('markers', "looptime: configure the fake fast-forwarding loop time.")
-
-
-def pytest_addoption(parser: Any) -> None:
-    group = parser.getgroup("asyncio time contraction")
-    group.addoption("--no-looptime", dest='looptime', action="store_const", const=False,
-                    help="Force all (even marked) tests to the true loop time.")
-    group.addoption("--looptime", dest='looptime', action="store_const", const=True,
-                    help="Run unmarked tests with the fake loop time by default.")
