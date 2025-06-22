@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import selectors
 import time
 import weakref
-from typing import TYPE_CHECKING, Any, Callable, MutableSet, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Iterator, MutableSet, TypeVar, cast, overload
 
 _T = TypeVar('_T')
 
@@ -61,6 +62,7 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
             idle_step: float | None = None,
             idle_timeout: float | None = None,
             noop_cycles: int = 42,
+            _enabled: bool | None = None,  # None means do nothing
     ) -> None:
         """
         Set all the fake-time fields and patch the i/o selector.
@@ -85,6 +87,13 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         self.__sync_clock: Callable[[], float] = time.perf_counter
         self.__sync_ts: float | None = None  # system/true-time clock timestamp
 
+        try:
+            self.__enabled  # type: ignore
+        except AttributeError:
+            self.__enabled = _enabled if _enabled is not None else True  # old behaviour
+        else:
+            self.__enabled = _enabled if _enabled is not None else self.__enabled
+
         # TODO: why do we patch the selector as an object while the event loop as a class?
         #       this should be the same patching method for both.
         try:
@@ -92,6 +101,24 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         except AttributeError:
             self.__original_select = self._selector.select
             self._selector.select = self.__replaced_select  # type: ignore
+
+    @property
+    def looptime_on(self) -> bool:
+        return bool(self.__enabled)
+
+    @contextlib.contextmanager
+    def looptime_enabled(self) -> Iterator[None]:
+        """
+        Temporarily enable the time compaction, restore the normal mode on exit.
+        """
+        if self.__enabled:
+            raise RuntimeError('Looptime mode is already enabled. Entered twice? Avoid this!')
+        old_enabled = self.__enabled
+        self.__enabled = True
+        try:
+            yield
+        finally:
+            self.__enabled = old_enabled
 
     def time(self) -> float:
         return self.__int2time(self.__now)
@@ -110,6 +137,16 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         ready: list[tuple[Any, Any]] = self.__original_select(timeout=0)
         if ready:
             pass
+
+        # If nothing to do right now, and the time is not compacted, truly sleep as requested.
+        # Move the fake time by the exact real time spent in this wait (±discrepancies).
+        elif not self.__enabled:
+            t0 = time.monotonic()
+            ready = self.__original_select(timeout=timeout)
+            t1 = time.monotonic()
+
+            # If timeout=None, it never exists until ready. This timeout check is for typing only.
+            self.__now += self.__time2int(t1 - t0 if ready or timeout is None else timeout)
 
         # Regardless of the timeout, if there are executors sync futures, we move the time in steps.
         # The timeout (if present) can limit the size of the step, but not the logic of stepping.

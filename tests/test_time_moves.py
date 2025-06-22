@@ -28,6 +28,14 @@ def test_execution_takes_near_zero_time(chronometer, looptime_loop):
     assert 0.0 <= chronometer.seconds < 0.01
 
 
+def test_execution_takes_true_time_when_disabled(chronometer, looptime_loop):
+    looptime_loop.setup_looptime(_enabled=False)
+    with chronometer:
+        looptime_loop.run_until_complete(asyncio.sleep(1))
+    assert looptime_loop.time() == 1
+    assert 1 <= chronometer.seconds < 1.1
+
+
 def test_real_time_is_ignored(chronometer, looptime_loop):
     async def f():
         await asyncio.sleep(5)

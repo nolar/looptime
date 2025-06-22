@@ -10,13 +10,15 @@ def test_cli_default_mode(testdir):
         @pytest.mark.asyncio
         async def test_normal():
             event_loop = asyncio.get_running_loop()
-            assert not isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert not event_loop.looptime_on
 
         @pytest.mark.asyncio
         @pytest.mark.looptime
         async def test_marked():
             event_loop = asyncio.get_running_loop()
             assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert event_loop.looptime_on
             assert event_loop.time() == 0
 
         @pytest.mark.asyncio
@@ -24,13 +26,15 @@ def test_cli_default_mode(testdir):
         async def test_configured():
             event_loop = asyncio.get_running_loop()
             assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert event_loop.looptime_on
             assert event_loop.time() == 123
 
         @pytest.mark.asyncio
         @pytest.mark.looptime(False)
         async def test_disabled():
             event_loop = asyncio.get_running_loop()
-            assert not isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert not event_loop.looptime_on
     """)
     result = testdir.runpytest()
     result.assert_outcomes(passed=4)
@@ -46,6 +50,7 @@ def test_cli_option_enabled(testdir):
         async def test_normal():
             event_loop = asyncio.get_running_loop()
             assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert event_loop.looptime_on
             assert event_loop.time() == 0
 
         @pytest.mark.asyncio
@@ -53,6 +58,7 @@ def test_cli_option_enabled(testdir):
         async def test_marked():
             event_loop = asyncio.get_running_loop()
             assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert event_loop.looptime_on
             assert event_loop.time() == 0
 
         @pytest.mark.asyncio
@@ -60,13 +66,15 @@ def test_cli_option_enabled(testdir):
         async def test_configured():
             event_loop = asyncio.get_running_loop()
             assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert event_loop.looptime_on
             assert event_loop.time() == 123
 
         @pytest.mark.asyncio
         @pytest.mark.looptime(False)
         async def test_disabled():
             event_loop = asyncio.get_running_loop()
-            assert not isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert not event_loop.looptime_on
     """)
     result = testdir.runpytest("--looptime")
     result.assert_outcomes(passed=4)
@@ -81,25 +89,29 @@ def test_cli_option_disabled(testdir):
         @pytest.mark.asyncio
         async def test_normal():
             event_loop = asyncio.get_running_loop()
-            assert not isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert not event_loop.looptime_on
 
         @pytest.mark.asyncio
         @pytest.mark.looptime
         async def test_marked():
             event_loop = asyncio.get_running_loop()
-            assert not isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert not event_loop.looptime_on
 
         @pytest.mark.asyncio
         @pytest.mark.looptime(start=123)
         async def test_configured():
             event_loop = asyncio.get_running_loop()
-            assert not isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert not event_loop.looptime_on
 
         @pytest.mark.asyncio
         @pytest.mark.looptime(False)
         async def test_disabled():
             event_loop = asyncio.get_running_loop()
-            assert not isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert isinstance(event_loop, looptime.LoopTimeEventLoop)
+            assert not event_loop.looptime_on
     """)
     result = testdir.runpytest("--no-looptime")
     result.assert_outcomes(passed=4)

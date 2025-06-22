@@ -43,9 +43,8 @@ def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:
                 options.update(marker.kwargs)
                 enabled = bool(marker.args[0]) if marker.args else enabled
 
+            result = patched_loop = patchers.patch_event_loop(loop, _enabled=False)
             if enabled:
-                patched_loop = patchers.patch_event_loop(loop)
-                patched_loop.setup_looptime(**options)
-                result = patched_loop
+                patched_loop.setup_looptime(**options, _enabled=True)
 
     return result
