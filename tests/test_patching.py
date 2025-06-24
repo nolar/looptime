@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 import looptime
 
 
@@ -33,6 +35,7 @@ def test_patching_initialises():
 
 def test_initial_time_is_customized():
     loop = looptime.patch_event_loop(asyncio.new_event_loop(), start=123)
+    assert loop.looptime_on
     assert loop.time() == 123
 
 
@@ -41,4 +44,49 @@ def test_new_event_loop_is_patched_out_of_the_box():
     loop = looptime.new_event_loop(start=123)
     assert isinstance(loop, default_loop_cls)
     assert isinstance(loop, looptime.LoopTimeEventLoop)
+    assert loop.looptime_on
     assert loop.time() == 123
+
+
+def test_patching_activates_by_default():
+    old_loop = MyEventLoop()
+    new_loop = looptime.patch_event_loop(old_loop)
+    assert new_loop.looptime_on
+
+
+def test_patching_disabled_if_specified():
+    old_loop = MyEventLoop()
+    new_loop = looptime.patch_event_loop(old_loop, _enabled=False)
+    assert not new_loop.looptime_on
+
+
+def test_contextual_activation():
+    old_loop = MyEventLoop()
+    new_loop = looptime.patch_event_loop(old_loop, _enabled=False)
+    with new_loop.looptime_enabled():
+        assert new_loop.looptime_on
+
+
+def test_double_activation_protection():
+    old_loop = MyEventLoop()
+    new_loop = looptime.patch_event_loop(old_loop, _enabled=False)
+    with new_loop.looptime_enabled():
+        with pytest.raises(RuntimeError, match=r"already enabled"):
+            with new_loop.looptime_enabled():
+                pass
+
+
+@pytest.mark.parametrize('state', [True, False])
+def test_setup_preserves_the_old_state(state: bool):
+    old_loop = MyEventLoop()
+    new_loop = looptime.patch_event_loop(old_loop, _enabled=state)
+    new_loop.setup_looptime()
+    assert new_loop.looptime_on if state else not new_loop.looptime_on
+
+
+@pytest.mark.parametrize('state', [True, False])
+def test_setup_overwrites_the_old_state(state: bool):
+    old_loop = MyEventLoop()
+    new_loop = looptime.patch_event_loop(old_loop, _enabled=state)
+    new_loop.setup_looptime(_enabled=not state)
+    assert not new_loop.looptime_on if state else new_loop.looptime_on

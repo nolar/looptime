@@ -52,7 +52,8 @@ async def test_async_context_manager():
 
 @pytest.mark.asyncio
 @pytest.mark.looptime(start=100)
-async def test_readme_example(chronometer, event_loop):
+async def test_readme_example(chronometer):
+    event_loop = asyncio.get_running_loop()
     with chronometer, looptime.Chronometer(event_loop.time) as loopometer:
         await asyncio.sleep(1)
         await asyncio.sleep(1)

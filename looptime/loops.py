@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import selectors
 import time
+import warnings
 import weakref
-from typing import TYPE_CHECKING, Any, Callable, MutableSet, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Iterator, MutableSet, TypeVar, cast, overload
 
 _T = TypeVar('_T')
 
@@ -14,6 +16,11 @@ if TYPE_CHECKING:
 else:
     AnyFuture = asyncio.Future
     AnyTask = asyncio.Task
+
+
+class TimeWarning(UserWarning):
+    """Issued when the loop time moves backwards, violating its monotonicity."""
+    pass
 
 
 class LoopTimeoutError(asyncio.TimeoutError):
@@ -61,6 +68,7 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
             idle_step: float | None = None,
             idle_timeout: float | None = None,
             noop_cycles: int = 42,
+            _enabled: bool | None = None,  # None means do nothing
     ) -> None:
         """
         Set all the fake-time fields and patch the i/o selector.
@@ -69,9 +77,33 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         when the mixin/class is injected into the existing event loop object.
         In that case, the object is already initialised except for these fields.
         """
+        new_time: float | None = start() if callable(start) else start
+        end_time: float | None = end() if callable(end) else end
+        old_time: float | None
+        try:
+            # NB: using the existing (old) reciprocal!
+            old_time = self.__int2time(self.__now)
+        except AttributeError:  # initial setup: either reciprocals or __now are absent
+            old_time = None
+        new_time = float(new_time) if new_time is not None else None
+
+        # If it is the 2nd or later setup, double-check on time monotonicity.
+        # In some configurations, this waring might raise an error and fail the test.
+        # In that case, the time must not be changed for the next test.
+        if old_time is not None and new_time is not None and new_time < old_time:
+            warnings.warn(
+                f"The time of the event loop moves backwards from {old_time} to {new_time},"
+                " thus breaking the monotonicity of time. This is dangerous!"
+                " Perhaps, caused by reusing a higher-scope event loop in tests."
+                " Revise the scopes of fixtures & event loops."
+                " Remove the start=… kwarg and rely on arbitrary time values."
+                " Migrate from `loop.time()` to the `looptime` numeric fixture.",
+                TimeWarning,
+            )
+
         self.__resolution_reciprocal: int = round(1/resolution)
-        self.__now: int = self.__time2int(start() if callable(start) else start) or 0
-        self.__end: int | None = self.__time2int(end() if callable(end) else end)
+        self.__now: int = self.__time2int(new_time or old_time) or 0
+        self.__end: int | None = self.__time2int(end_time)
 
         self.__idle_timeout: int | None = self.__time2int(idle_timeout)
         self.__idle_step: int | None = self.__time2int(idle_step)
@@ -85,6 +117,13 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         self.__sync_clock: Callable[[], float] = time.perf_counter
         self.__sync_ts: float | None = None  # system/true-time clock timestamp
 
+        try:
+            self.__enabled  # type: ignore
+        except AttributeError:
+            self.__enabled = _enabled if _enabled is not None else True  # old behaviour
+        else:
+            self.__enabled = _enabled if _enabled is not None else self.__enabled
+
         # TODO: why do we patch the selector as an object while the event loop as a class?
         #       this should be the same patching method for both.
         try:
@@ -92,6 +131,24 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         except AttributeError:
             self.__original_select = self._selector.select
             self._selector.select = self.__replaced_select  # type: ignore
+
+    @property
+    def looptime_on(self) -> bool:
+        return bool(self.__enabled)
+
+    @contextlib.contextmanager
+    def looptime_enabled(self) -> Iterator[None]:
+        """
+        Temporarily enable the time compaction, restore the normal mode on exit.
+        """
+        if self.__enabled:
+            raise RuntimeError('Looptime mode is already enabled. Entered twice? Avoid this!')
+        old_enabled = self.__enabled
+        self.__enabled = True
+        try:
+            yield
+        finally:
+            self.__enabled = old_enabled
 
     def time(self) -> float:
         return self.__int2time(self.__now)
@@ -110,6 +167,16 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
         ready: list[tuple[Any, Any]] = self.__original_select(timeout=0)
         if ready:
             pass
+
+        # If nothing to do right now, and the time is not compacted, truly sleep as requested.
+        # Move the fake time by the exact real time spent in this wait (±discrepancies).
+        elif not self.__enabled:
+            t0 = time.monotonic()
+            ready = self.__original_select(timeout=timeout)
+            t1 = time.monotonic()
+
+            # If timeout=None, it never exists until ready. This timeout check is for typing only.
+            self.__now += self.__time2int(t1 - t0 if ready or timeout is None else timeout)
 
         # Regardless of the timeout, if there are executors sync futures, we move the time in steps.
         # The timeout (if present) can limit the size of the step, but not the logic of stepping.
