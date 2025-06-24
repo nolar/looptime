@@ -3,8 +3,6 @@
 [![CI](https://github.com/nolar/looptime/workflows/Thorough%20tests/badge.svg)](https://github.com/nolar/looptime/actions/workflows/thorough.yaml)
 [![codecov](https://codecov.io/gh/nolar/looptime/branch/main/graph/badge.svg)](https://codecov.io/gh/nolar/looptime)
 [![Coverage Status](https://coveralls.io/repos/github/nolar/looptime/badge.svg?branch=main)](https://coveralls.io/github/nolar/looptime?branch=main)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/nolar/looptime.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nolar/looptime/alerts/)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/nolar/looptime.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nolar/looptime/context:python)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 ## What?
@@ -19,10 +17,10 @@ The effects of time removal can be seen from both sides:
   This hides the code overhead and network latencies from the time measurements,
   making the loop time sharply and predictably advancing in configured steps.
 
-* From the **observer's (i.e. your) point of view,**
+* From the **observer's (i.e. your personal) point of view,**
   all activities of the event loop, such as sleeps, events/conditions waits,
   timeouts, "later" callbacks, happen in near-zero amount of the real time
-  (above the usual code overhead).
+  (due to the usual code execution overhead).
   This speeds up the execution of tests without breaking the tests' time-based
   design, even if they are designed to run in seconds or minutes.
 
@@ -59,19 +57,19 @@ at the same time:
 * One is for the coroutine-under-test which moves between states
   in the background.
 * Another one is for the test itself, which controls the flow
-  of that coroutine-under-test: it sets events, injects data, etc.
+  of that coroutine-under-test: it schedules events, injects data, etc.
 
 In textbook cases with simple coroutines that are more like regular functions,
 it is possible to design a test so that it runs straight to the end in one hop
 — with all the preconditions set and data prepared in advance in the test setup.
 
-However, in real-world cases, the tests often must verify that
+However, in the real-world cases, the tests often must verify that
 the coroutine stops at some point, waits for a condition for some limited time,
 and then passes or fails.
 
 The problem is often "solved" by mocking the low-level coroutines of sleep/wait
 that we expect the coroutine-under-test to call. But this violates the main
-principle of good unit-tests: test the promise, not the implementation.
+principle of good unit-tests: **test the promise, not the implementation.**
 Mocking and checking the low-level coroutines is based on the assumptions
 of how the coroutine is implemented internally, which can change over time.
 Good tests do not change on refactoring if the protocol remains the same.
@@ -79,8 +77,8 @@ Good tests do not change on refactoring if the protocol remains the same.
 Another (straightforward) approach is to not mock the low-level routines, but
 to spend the real-world time, just in short bursts as hard-coded in the test.
 Not only it makes the whole test-suite slower, it also brings the execution
-time close to the values where the code overhead affects the timing
-and makes it difficult to assert on the coroutine's pure time.
+time close to the values where the code overhead or measurement errors affect
+the timing, which makes it difficult to assert on the coroutine's pure time.
 
 
 ## Solution
@@ -232,13 +230,26 @@ async def test_me():
 `start` (`float` or `None`, or a no-argument callable that returns the same)
 is the initial time of the event loop.
 
-If it is callable, it is invoked once per event loop to get the value:
+If it is a callable, it is invoked once per event loop to get the value:
 e.g. `start=time.monotonic` to align with the true time,
 or `start=lambda: random.random() * 100` to add some unpredictability.
 
 `None` is treated the same as `0.0`.
 
-The default is `0.0`.
+The default is `0.0`. For reusable event loops, the default is to keep
+the time untouched, which means `0.0` or the explicit value for the first test,
+but then an ever-increasing value for the 2nd, 3rd, and further tests.
+
+Note: pytest-asyncio 1.0.0+ introduced event loops with higher scopes,
+e.g. class-, module-, packages-, session-scoped event loops used in tests.
+Such event loops are reused, so their time continues growing through many tests.
+However, if the test is explicitly configured with the start time,
+that time is enforced to the event loop when the test function starts —
+to satisfy the clearly declared intentions — even if the time moves backwards,
+which goes against the nature of the time itself (monotonically growing).
+This might lead to surprises in time measurements outside of the test,
+e.g. in fixtures: the code durations can become negative, or the events can
+happen (falsely) before they are scheduled (loop-clock-wise). Be careful.
 
 
 ### The end of time
@@ -255,6 +266,8 @@ e.g. with `asyncio.sleep(0)`, simple `await` statements, etc.
 
 If set to `None`, there is no end of time, and the event loop runs
 as long as needed. Note: `0` means ending the time immediately on start.
+Be careful with the explicit ending time in higher-scoped event loops
+of pytest-asyncio>=1.0.0, since they time increases through many tests.
 
 If it is a callable, it is called once per event loop to get the value:
 e.g. `end=lambda: time.monotonic() + 10`.
@@ -512,6 +525,63 @@ For example, with the resolution `0.001`, the time
 everything smaller than `0.001` becomes `0` and probably misbehaves._
 
 
+### Time magic coverage
+
+The time compaction magic is enabled only for the duration of the test,
+i.e. the test function — but not the fixtures.
+The fixtures run in the real (wall-clock) time.
+
+The options (including the force starting time) are applied at the test function
+starting moment, not when it is setting up the fixtures (even function-scoped).
+
+This is caused by a new concept of multiple co-existing event loops
+in pytest-asyncio>=1.0.0:
+
+- It is unclear which options to apply to higher-scoped fixtures
+  used by many tests, which themselves use higher-scoped event loops —
+  especially in selective partial runs. Technically, it is the 1st test,
+  with the options of 2nd and further tests simply ignored.
+- It is impossible to guess which event loop will be the running loop
+  in the test until we reach the test itself, i.e. we do not know this
+  when setting up the fixtures, even function-scoped fixtures.
+- There is no way to cover the fixture teardown (no hook in pytest),
+  only for the fixture setup and post-teardown cleanup.
+
+As such, this functionality (covering of function-scoped fixtures)
+was abandoned — since it was never promised, tested, or documented —
+plus an assumption that it was never used by anyone (it should not be).
+It was rather a side effect of the previous implemention,
+which is not available or possible anymore.
+
+
+### pytest-asyncio>=1.0.0
+
+As it is said above, pytest-asyncio>=1.0.0 introduced several co-existing
+event loops of different scopes. The time compaction in these event loops
+is NOT activated. Only the running loop of the test function is activated.
+
+Configuring and activating multiple co-existing event loops brings a few
+conceptual challenges, which require a good sample case to look into,
+and some time to think.
+
+Would you need time compaction in your fixtures of higher scopes,
+do it explicitly:
+
+```python
+import asyncio
+import pytest
+
+@pytest.fixture
+async def fixt():
+    loop = asyncio.get_running_loop()
+    loop.setup_looptime(start=123, end=456)
+    with loop.looptime_enabled():
+        await do_things()
+```
+
+There is #11 to add a feature to do this automatically, but it is not yet done.
+
+
 ## Extras
 
 ### Chronometers
@@ -605,6 +675,8 @@ the loop time also includes the time of all fixtures setups.
 Do you use a custom event loop? No problem! Create a test-specific descendant
 with the provided mixin — and it will work the same as the default event loop.
 
+For `pytest-asyncio<1.0.0`:
+
 ```python
 import looptime
 import pytest
@@ -620,12 +692,37 @@ def event_loop():
     return LooptimeCustomEventLoop()
 ```
 
+For `pytest-asyncio>=1.0.0`:
+
+```python
+import asyncio
+import looptime
+import pytest
+from wherever import CustomEventLoop
+
+
+class LooptimeCustomEventLoop(looptime.LoopTimeEventLoop, CustomEventLoop):
+    pass
+
+
+class LooptimeCustomEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
+    def new_event_loop(self):
+        return LooptimeCustomEventLoop()
+
+
+@pytest.fixture(scope='session')
+def event_loop_policy():
+    return LooptimeCustomEventLoopPolicy()
+```
+
 Only selector-based event loops are supported: the event loop must rely on
 `self._selector.select(timeout)` to sleep for `timeout` true-time seconds.
 Everything that inherits from `asyncio.BaseEventLoop` should work.
 
 You can also patch almost any event loop class or event loop object
 the same way as `looptime` does that (via some dirty hackery):
+
+For `pytest-asyncio<1.0.0`:
 
 ```python
 import asyncio
@@ -637,6 +734,25 @@ import pytest
 def event_loop():
     loop = asyncio.new_event_loop()
     return looptime.patch_event_loop(loop)
+```
+
+For `pytest-asyncio>=1.0.0`:
+
+```python
+import asyncio
+import looptime
+import pytest
+
+
+class LooptimeEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
+    def new_event_loop(self):
+        loop = super().new_event_loop()
+        return looptime.patch_event_loop(loop)
+
+
+@pytest.fixture(scope='session')
+def event_loop_policy():
+    return LooptimeEventLoopPolicy()
 ```
 
 `looptime.make_event_loop_class(cls)` constructs a new class that inherits
