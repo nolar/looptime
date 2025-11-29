@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -r requirements.txt
+      - run: pip install --group dev --group lint -e .
       - run: pre-commit run --all-files
       - run: mypy looptime --strict
 
@@ -38,8 +38,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: pip install -r requirements.txt
-      - run: pip install -e .
+      - run: pip install --group dev -e .
       - run: pip install "${{ matrix.install-extras }}"
         if: ${{ matrix.install-extras }}
       - run: pytest --color=yes --cov=looptime --cov-branch
@@ -75,8 +74,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: pip install -r requirements.txt
-      - run: pip install -e .
+      - run: pip install --group dev -e .
       - run: pytest --color=yes --no-cov
 
   coveralls-finish:
