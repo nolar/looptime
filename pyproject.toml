@@ -55,7 +55,7 @@ dev = [
     "mypy==1.19.0",
     "pre-commit",
     "pytest",
-    "pytest-asyncio",
+    "pytest-asyncio<1.1.0",
     "pytest-cov",
     "pytest-mock",
 ]
