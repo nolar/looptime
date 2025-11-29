@@ -171,7 +171,18 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
     should_patch = _should_patch(fixturedef, request)
     is_loop = isinstance(result, asyncio.BaseEventLoop)
     is_runner = False if sys.version_info < (3, 11) else isinstance(result, asyncio.Runner)
-    if should_patch and (is_loop or is_runner):
+    is_bp_runner = False if sys.version_info < (3, 11) else isinstance(result, asyncio.Runner)
+
+    # We avoid extra dependencies, but pytest-asyncio>=1.1.0 uses it, and we need to detect it.
+    # TODO: remove when Python 3.10 is dropped (≈October 2026).
+    try:
+        from backports.asyncio.runner import Runner as bp_Runner
+    except ImportError:
+        is_bp_runner = False
+    else:
+        is_bp_runner = isinstance(result, bp_Runner)
+
+    if should_patch and (is_loop or is_runner or is_bp_runner):
 
         # Populate the helper mapper of names-to-scopes, as used in the test hook below.
         if EVENT_LOOP_SCOPES not in request.session.stash:
@@ -190,6 +201,10 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
             # Available only in python>=3.11, but mandatory for python>=3.14.
             # The runner of pytest-asyncio is already entered, which means the loop is created.
             # Even if not created, we cannot postpone the loop creation, so we create it here.
+            loop = result.get_loop()
+            if isinstance(loop, asyncio.BaseEventLoop):
+                patchers.patch_event_loop(loop, _enabled=False)
+        elif is_bp_runner:  # TODO: drop this branch with Python 3.10
             loop = result.get_loop()
             if isinstance(loop, asyncio.BaseEventLoop):
                 patchers.patch_event_loop(loop, _enabled=False)
