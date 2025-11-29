@@ -108,6 +108,7 @@ We then apply the options, and activate the pre-patched running event loop.
 from __future__ import annotations
 
 import asyncio
+import sys
 import warnings
 from typing import Any
 
@@ -166,7 +167,11 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
     result = yield
 
     # Only do the magic if in the area of our interest & only for fixtures making the event loops.
-    if _should_patch(fixturedef, request) and isinstance(result, asyncio.BaseEventLoop):
+    # TODO: rewrite to simpler `if` & match-case when Python 3.10 is dropped (≈October 2026).
+    should_patch = _should_patch(fixturedef, request)
+    is_loop = isinstance(result, asyncio.BaseEventLoop)
+    is_runner = False if sys.version_info < (3, 11) else isinstance(result, asyncio.Runner)
+    if should_patch and (is_loop or is_runner):
 
         # Populate the helper mapper of names-to-scopes, as used in the test hook below.
         if EVENT_LOOP_SCOPES not in request.session.stash:
@@ -179,7 +184,15 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
         # NB: For the lowest "function" scope, we still cannot decide which options to use, since
         # we do not know yet if it will be the running loop or not — so we cannot optimize here
         # in order to patch-and-configure only once; we must patch here & configure+activate later.
-        result = patchers.patch_event_loop(result, _enabled=False)
+        if isinstance(result, asyncio.BaseEventLoop):
+            patchers.patch_event_loop(result, _enabled=False)
+        elif sys.version_info >= (3, 11) and isinstance(result, asyncio.Runner):
+            # Available only in python>=3.11, but mandatory for python>=3.14.
+            # The runner of pytest-asyncio is already entered, which means the loop is created.
+            # Even if not created, we cannot postpone the loop creation, so we create it here.
+            loop = result.get_loop()
+            if isinstance(loop, asyncio.BaseEventLoop):
+                patchers.patch_event_loop(loop, _enabled=False)
 
     return result
 
@@ -188,7 +201,8 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
 def pytest_fixture_post_finalizer(fixturedef: pytest.FixtureDef[Any], request: pytest.FixtureRequest) -> Any:
     # Cleanup the helper mapper of the fixture's names-to-scopes, as used in the test-running hook.
     # Internal consistency check: some cases should not happen, but we do not fail if they do.
-    if EVENT_LOOP_SCOPES in request.session.stash:
+    should_patch = _should_patch(fixturedef, request)
+    if should_patch and EVENT_LOOP_SCOPES in request.session.stash:
         event_loop_scopes: EventLoopScopes = request.session.stash[EVENT_LOOP_SCOPES]
         if fixturedef.argname not in event_loop_scopes:
             warnings.warn(
@@ -232,8 +246,11 @@ def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> Any:
     funcargs: dict[str, Any] = pyfuncitem.funcargs
     if 'event_loop_policy' in funcargs:  # pytest-asyncio>=1.0.0
         # This can be ANY event loop of ANY declared scope of pytest-asyncio.
-        policy: asyncio.AbstractEventLoopPolicy = funcargs['event_loop_policy']
-        running_loop = policy.get_event_loop()
+        policy = funcargs['event_loop_policy']
+        try:
+            running_loop = policy.get_event_loop()
+        except RuntimeError:  # a sync test with no loop set? not our business!
+            return (yield)
     elif 'event_loop' in funcargs:  # pytest-asyncio<1.0.0
         # The hook itself has NO "running" loop — because it is sync, not async.
         running_loop = funcargs['event_loop']
