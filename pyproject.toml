@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm>=8.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "looptime"
+description = "Fast-forward asyncio event loop time (in tests)"
+keywords = ["asyncio", "event loop", "time", "python", "pytest"]
+authors = [{name = "Sergey Vasilyev", email = "nolar@nolar.info"}]
+maintainers = [{name = "Sergey Vasilyev", email = "nolar@nolar.info"}]
+license = "MIT"
+readme = "README.md"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Framework :: AsyncIO",
+    "Framework :: Pytest",
+    "Framework :: aiohttp",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+requires-python = ">=3.9"
+dependencies = [
+]
+dynamic = ["version"]  # taken from git tags
+
+[project.urls]
+homepage = "https://github.com/nolar/looptime"
+repository = "https://github.com/nolar/looptime"
+documentation = "https://github.com/nolar/looptime"
+
+[project.entry-points.pytest11]
+looptime_plugin = "looptime.plugin"
+looptime_timeproxies = "looptime.timeproxies"
+looptime_chronometers = "looptime.chronometers"
+
+[dependency-groups]
+dev = [
+    "async-timeout",
+    "codecov",
+    "coverage",
+    "coveralls",
+    "isort",
+    "mypy==1.19.0",
+    "pre-commit",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+]
+
+[tool.setuptools_scm]
+version_file = "looptime/_version.py"
