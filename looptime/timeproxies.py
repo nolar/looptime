@@ -23,10 +23,11 @@ class LoopTimeProxy(math.Numeric):
         return f"<Loop time: {self._value}>"
 
     def __matmul__(self, other: object) -> LoopTimeProxy:
-        if isinstance(other, asyncio.AbstractEventLoop):
-            return self.__class__(other)
-        else:
-            return NotImplemented
+        match other:
+            case asyncio.AbstractEventLoop():
+                return self.__class__(other)
+            case _:
+                return NotImplemented
 
     @property
     def _value(self) -> float:

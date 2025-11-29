@@ -34,80 +34,92 @@ class Numeric(metaclass=abc.ABCMeta):
     #
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, (int, float)):
-            return round(self._value * self.__rr) == round(other * self.__rr)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return round(self._value * self.__rr) == round(other * self.__rr)
+            case _:
+                return NotImplemented
 
     def __ne__(self, other: object) -> bool:
-        if isinstance(other, (int, float)):
-            return round(self._value * self.__rr) != round(other * self.__rr)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return round(self._value * self.__rr) != round(other * self.__rr)
+            case _:
+                return NotImplemented
 
     def __ge__(self, other: object) -> bool:
-        if isinstance(other, (int, float)):
-            return round(self._value * self.__rr) >= round(other * self.__rr)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return round(self._value * self.__rr) >= round(other * self.__rr)
+            case _:
+                return NotImplemented
 
     def __gt__(self, other: object) -> bool:
-        if isinstance(other, (int, float)):
-            return round(self._value * self.__rr) > round(other * self.__rr)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return round(self._value * self.__rr) > round(other * self.__rr)
+            case _:
+                return NotImplemented
 
     def __le__(self, other: object) -> bool:
-        if isinstance(other, (int, float)):
-            return round(self._value * self.__rr) <= round(other * self.__rr)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return round(self._value * self.__rr) <= round(other * self.__rr)
+            case _:
+                return NotImplemented
 
     def __lt__(self, other: object) -> bool:
-        if isinstance(other, (int, float)):
-            return round(self._value * self.__rr) < round(other * self.__rr)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return round(self._value * self.__rr) < round(other * self.__rr)
+            case _:
+                return NotImplemented
 
     #
     # Arithmetics:
     #
 
     def __add__(self, other: object) -> float:
-        if isinstance(other, (int, float)):
-            return (round(self._value * self.__rr) + round(other * self.__rr)) / self.__rr
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return (round(self._value * self.__rr) + round(other * self.__rr)) / self.__rr
+            case _:
+                return NotImplemented
 
     def __sub__(self, other: object) -> float:
-        if isinstance(other, (int, float)):
-            return (round(self._value * self.__rr) - round(other * self.__rr)) / self.__rr
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return (round(self._value * self.__rr) - round(other * self.__rr)) / self.__rr
+            case _:
+                return NotImplemented
 
     def __mul__(self, other: object) -> float:
-        if isinstance(other, (int, float)):
-            return (round(self._value * self.__rr) * round(other * self.__rr)) / (self.__rr ** 2)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return (round(self._value * self.__rr) * round(other * self.__rr)) / (self.__rr ** 2)
+            case _:
+                return NotImplemented
 
     def __floordiv__(self, other: object) -> float:
-        if isinstance(other, (int, float)):
-            return (round(self._value * self.__rr) // round(other * self.__rr))
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return (round(self._value * self.__rr) // round(other * self.__rr))
+            case _:
+                return NotImplemented
 
     def __truediv__(self, other: object) -> float:
-        if isinstance(other, (int, float)):
-            return (round(self._value * self.__rr) / round(other * self.__rr))
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return (round(self._value * self.__rr) / round(other * self.__rr))
+            case _:
+                return NotImplemented
 
     def __mod__(self, other: object) -> float:
-        if isinstance(other, (int, float)):
-            return (round(self._value * self.__rr) % round(other * self.__rr)) / (self.__rr)
-        else:
-            return NotImplemented
+        match other:
+            case int() | float():
+                return (round(self._value * self.__rr) % round(other * self.__rr)) / (self.__rr)
+            case _:
+                return NotImplemented
 
     # See the StdLib's comments on pow() on why it is Any, not float.
     def __pow__(self, power: float, modulo: None = None) -> Any:
