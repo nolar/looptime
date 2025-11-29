@@ -30,14 +30,15 @@ def patch_event_loop(
         **kwargs: Any,
 ) -> loops.LoopTimeEventLoop:
     result: loops.LoopTimeEventLoop
-    if isinstance(loop, loops.LoopTimeEventLoop):
-        return loop
-    else:
-        new_class = make_event_loop_class(loop.__class__)
-        loop.__class__ = new_class
-        loop = cast(loops.LoopTimeEventLoop, loop)
-        loop.setup_looptime(**kwargs)
-        return loop
+    match loop:
+        case loops.LoopTimeEventLoop():
+            return loop
+        case _:
+            new_class = make_event_loop_class(loop.__class__)
+            loop.__class__ = new_class
+            loop = cast(loops.LoopTimeEventLoop, loop)
+            loop.setup_looptime(**kwargs)
+            return loop
 
 
 def new_event_loop(**kwargs: Any) -> loops.LoopTimeEventLoop:
