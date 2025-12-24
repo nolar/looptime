@@ -180,12 +180,12 @@ async def test_me():
 The markers can also be artificially injected by plugins/hooks if needed:
 
 ```python
-import asyncio
+import inspect
 import pytest
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_pycollect_makeitem(collector, name, obj):
-    if collector.funcnamefilter(name) and asyncio.iscoroutinefunction(obj):
+    if collector.funcnamefilter(name) and inspect.iscoroutinefunction(obj):
         pytest.mark.asyncio(obj)
         pytest.mark.looptime(end=60)(obj)
     yield

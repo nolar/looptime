@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
-      - run: pip install --group dev --group lint -e .
+      - run: pip install --group lint -e .
       - run: pre-commit run --all-files
       - run: mypy looptime --strict
 
