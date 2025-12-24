@@ -57,6 +57,7 @@ dev = [
     "pytest-mock",
 ]
 lint = [
+    {include-group = "dev"},
     "mypy==1.19.0",
     "pre-commit",
     "isort",
