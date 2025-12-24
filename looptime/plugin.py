@@ -19,7 +19,7 @@ in its own isolated short-lived event loop, is now broken:
 - A single event loop can be shared by multiple (but not all) tests.
 - A single test can be spread over multiple (but not all) event loops.
 
-An classic example:
+A classic example:
 
 - A session-scoped fixture ``server`` starts a port listener & an HTTP server.
 - A module-scoped fixture ``data`` populates the server via POST requests.
@@ -52,7 +52,7 @@ Either way, we set the loop time as requested, but with a few nuances:
    Previously, the higher-scoped fixtures did not exist, so nothing breaks.
 
 2. If the start time is explicitly defined and is in the future, move the time
-   forwards as specified — indistinguishable from the previous behaviour
+   forward as specified — indistinguishable from the previous behaviour
    (except there could be artifacts from the previous tests in the loop).
 
 3. If the start time is explicitly defined and is in the past, issue a warning
@@ -261,6 +261,9 @@ def _should_patch(fixturedef: pytest.FixtureDef[Any], request: pytest.FixtureReq
         return True
 
     # pytest-asyncio>=1.0.0 exposes several event loops, one per scope, all hidden in the module.
+    # We patch BOTH the default implementation, AND all those dirty hacks that users might make.
+    # NB: We also report True on unrelated fixtures, such as `unused_tcp_port_factory`, etc.
+    # This has no effect: they will not pass the extra test on being patchable loops & runners.
     asyncio_plugin = request.config.pluginmanager.getplugin("asyncio")  # a module object
     asyncio_names: set[str] = {
         name for name in dir(asyncio_plugin) if _is_fixture(getattr(asyncio_plugin, name))
