@@ -265,12 +265,14 @@ def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> Any:
         try:
             running_loop = policy.get_event_loop()
         except RuntimeError:  # a sync test with no loop set? not our business!
-            return (yield)
+            # The test error should come on its own later, not from the handler of the RuntimeError.
+            # Otherwise, the stacktraces are misleading, showing the RuntimeError for no reason.
+            running_loop = None
     elif 'event_loop' in funcargs:  # pytest-asyncio<1.0.0
         # The hook itself has NO "running" loop — because it is sync, not async.
         running_loop = funcargs['event_loop']
     else: # not pytest-asyncio? not our business!
-        return (yield)
+        running_loop = None
 
     # The event loop is not patched? We are doomed to fail, so let it run somehow on its own.
     # This might happen if the custom event loop policy was set not by pytest-asyncio.
