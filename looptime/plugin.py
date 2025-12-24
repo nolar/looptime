@@ -157,10 +157,6 @@ def pytest_addoption(parser: Any) -> None:
                     help="Run unmarked tests with the fake loop time by default.")
 
 
-EventLoopScopes = dict[str, list[str]]  # {fixture_name -> [outer_scopes, …, innermost_scope]}
-EVENT_LOOP_SCOPES = pytest.StashKey[EventLoopScopes]()
-
-
 @pytest.hookimpl(wrapper=True)
 def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.FixtureRequest) -> Any:
     # Setup as usual. We do the magic only afterwards, when we have the event loop created.
@@ -182,19 +178,12 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
     else:
         is_bp_runner = isinstance(result, bp_Runner)
 
+    # Patch the event loop at creation — even if unused and not enabled. We cannot patch later
+    # in the middle of the run: e.g. for a session-scoped loop used in a few tests out of many.
+    # NB: For the lowest "function" scope, we still cannot decide which options to use, since
+    # we do not know yet if it will be the running loop or not — so we cannot optimize here
+    # in order to patch-and-configure only once; we must patch here & configure+activate later.
     if should_patch and (is_loop or is_runner or is_bp_runner):
-
-        # Populate the helper mapper of names-to-scopes, as used in the test hook below.
-        if EVENT_LOOP_SCOPES not in request.session.stash:
-            request.session.stash[EVENT_LOOP_SCOPES] = {}
-        event_loop_scopes: EventLoopScopes = request.session.stash[EVENT_LOOP_SCOPES]
-        event_loop_scopes.setdefault(fixturedef.argname, []).append(fixturedef.scope)
-
-        # Patch the event loop at creation — even if unused and not enabled. We cannot patch later
-        # in the middle of the run: e.g. for a session-scoped loop used in a few tests out of many.
-        # NB: For the lowest "function" scope, we still cannot decide which options to use, since
-        # we do not know yet if it will be the running loop or not — so we cannot optimize here
-        # in order to patch-and-configure only once; we must patch here & configure+activate later.
         if isinstance(result, asyncio.BaseEventLoop):
             patchers.patch_event_loop(result, _enabled=False)
         elif sys.version_info >= (3, 11) and isinstance(result, asyncio.Runner):
@@ -210,39 +199,6 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
                 patchers.patch_event_loop(loop, _enabled=False)
 
     return result
-
-
-@pytest.hookimpl(wrapper=True)
-def pytest_fixture_post_finalizer(fixturedef: pytest.FixtureDef[Any], request: pytest.FixtureRequest) -> Any:
-    # Cleanup the helper mapper of the fixture's names-to-scopes, as used in the test-running hook.
-    # Internal consistency check: some cases should not happen, but we do not fail if they do.
-    should_patch = _should_patch(fixturedef, request)
-    if should_patch and EVENT_LOOP_SCOPES in request.session.stash:
-        event_loop_scopes: EventLoopScopes = request.session.stash[EVENT_LOOP_SCOPES]
-        if fixturedef.argname not in event_loop_scopes:
-            warnings.warn(
-                f"Fixture {fixturedef.argname!r} not found in the cache of scopes."
-                f" Report as a bug, please add a reproducible snippet.",
-                RuntimeWarning,
-            )
-        elif not event_loop_scopes[fixturedef.argname]:
-            warnings.warn(
-                f"Fixture {fixturedef.argname!r} has the empty cache of scopes."
-                f" Report as a bug, please add a reproducible snippet.",
-                RuntimeWarning,
-            )
-        elif event_loop_scopes[fixturedef.argname][-1] != fixturedef.scope:
-            warnings.warn(
-                f"Fixture {fixturedef.argname!r} has the broken cache of scopes:"
-                f" {event_loop_scopes[fixturedef.argname]!r}, expecting {fixturedef.scope!r}"
-                f" Report as a bug, please add a reproducible snippet.",
-                RuntimeWarning,
-            )
-        else:
-            event_loop_scopes[fixturedef.argname][-1:] = []
-
-    # Go as usual.
-    return (yield)
 
 
 # This hook is the latest (deepest) possible entrypoint before diving into the test function itself,
