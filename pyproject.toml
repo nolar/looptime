@@ -46,6 +46,11 @@ looptime_timeproxies = "looptime._internal.timeproxies"
 looptime_chronometers = "looptime._internal.chronometers"
 
 [dependency-groups]
+docs = [
+    "sphinx>=9.0.0",
+    "sphinx-llm>=0.1.4",
+    "furo",
+]
 dev = [
     "async-timeout",
     "codecov",
