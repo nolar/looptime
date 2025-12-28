@@ -43,7 +43,7 @@ while the event loop believes it is 100 seconds old.
 Activation by marks
 ===================
 
-If the command line or ini-file options for all tests is not desirable,
+If the command line or ini-file options for all tests are not desirable,
 individual tests can be marked for fast time forwarding explicitly:
 
 .. code-block:: python

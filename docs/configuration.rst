@@ -47,17 +47,17 @@ The markers can also be artificially injected by plugins/hooks if needed:
         yield
 
 All in all, the ``looptime`` plugin uses the most specific (the "closest") value
-for each setting separately (i.e. not the closest marker as a whole).
+for each setting separately (i.e., not the closest marker as a whole).
 
 
 Options
 =======
 
 ``--looptime`` enables time fast-forwarding for all tests that are not explicitly
-marked as using the fake loop time —including those not marked at all—
+marked as using the fake loop time—including those not marked at all—
 as if all tests were implicitly marked.
 
-``--no-looptime`` runs all tests —both marked and unmarked— with the real time.
+``--no-looptime`` runs all tests, both marked and unmarked, with real time.
 This flag effectively disables the plugin.
 
 
@@ -89,25 +89,25 @@ The time zero
 is the initial time of the event loop.
 
 If it is a callable, it is invoked once per event loop to get the value:
-e.g. ``start=time.monotonic`` to align with the true time,
+e.g., ``start=time.monotonic`` to align with the true time,
 or ``start=lambda: random.random() * 100`` to add some unpredictability.
 
 ``None`` is treated the same as ``0.0``.
 
 The default is ``0.0``. For reusable event loops, the default is to keep
 the time untouched, which means ``0.0`` or the explicit value for the first test,
-but then an ever-increasing value for the 2nd, 3rd, and further tests.
+but then an ever-increasing value for the second, third, and subsequent tests.
 
 .. note::
     pytest-asyncio 1.0.0+ introduced event loops with higher scopes,
-    e.g. class-, module-, packages-, session-scoped event loops used in tests.
+    e.g., class-, module-, package-, session-scoped event loops used in tests.
     Such event loops are reused, so their time continues growing through many tests.
-    However, if the test is explicitly configured with the start time,
-    that time is enforced to the event loop when the test function starts —
-    to satisfy the clearly declared intentions — even if the time moves backwards,
-    which goes against the nature of the time itself (monotonically growing).
+    However, if the test is explicitly configured with a start time,
+    that time is enforced on the event loop when the test function starts—
+    to satisfy the clearly declared intentions—even if the time moves backwards,
+    which goes against the nature of time itself (monotonically growing).
     This might lead to surprises in time measurements outside of the test,
-    e.g. in fixtures: the code durations can become negative, or the events can
+    e.g., in fixtures: code durations can become negative, or events can
     happen (falsely) before they are scheduled (loop-clock-wise). Be careful.
 
 
@@ -121,16 +121,16 @@ The injected exception is :class:`looptime.LoopTimeoutError`,
 a subclass of :class:`asyncio.TimeoutError`.
 
 All test-/fixture-finalizing routines will have their fair chance to execute
-as long as they do not move the loop time forward, i.e. they take zero time:
-e.g. with ``asyncio.sleep(0)``, simple ``await`` statements, etc.
+as long as they do not move the loop time forward, i.e., they take zero time:
+e.g., with ``asyncio.sleep(0)``, simple ``await`` statements, etc.
 
 If set to ``None``, there is no end of time, and the event loop runs
 as long as needed. Note: ``0`` means ending the time immediately on start.
 Be careful with the explicit ending time in higher-scoped event loops
-of pytest-asyncio>=1.0.0, since they time increases through many tests.
+of pytest-asyncio>=1.0.0, since their time increases through many tests.
 
 If it is a callable, it is called once per event loop to get the value:
-e.g. ``end=lambda: time.monotonic() + 10``.
+e.g., ``end=lambda: time.monotonic() + 10``.
 
 The end of time is not the same as timeouts — see :doc:`nuances`
 on differences with ``async-timeout``.

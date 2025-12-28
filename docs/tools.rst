@@ -50,7 +50,7 @@ the provided context manager class with the event loop's clock:
 Assertions
 ==========
 
-The ``looptime`` **fixture** is syntax sugar for easy loop time assertions:
+The ``looptime`` **fixture** is syntactic sugar for easy loop time assertions:
 
 .. code-block:: python
 
@@ -63,16 +63,16 @@ The ``looptime`` **fixture** is syntax sugar for easy loop time assertions:
         await asyncio.sleep(1.23)
         assert looptime == 101.23
 
-Technically, it is a proxy object to ``asyncio.get_running_loop().time()``.
-The proxy object supports the direct comparison with numbers (integers/floats),
-so as some basic arithmetics (adding, subtracting, multiplication, etc).
-However, it adjusts to the time precision of 1 nanosecond (1e-9): every digit
-beyond that precision is ignored — so you can be not afraid of
+Technically, it is a proxy object for ``asyncio.get_running_loop().time()``.
+The proxy object supports direct comparison with numbers (integers/floats),
+as well as some basic arithmetic (addition, subtraction, multiplication, etc.).
+However, it adjusts to a time precision of 1 nanosecond (1e-9): every digit
+beyond that precision is ignored — so you do not need to be afraid of
 ``123.456/1.2`` suddenly becoming ``102.88000000000001`` and not equal to ``102.88``
 (as long as the time proxy object is used and not converted to a native float).
 
 The proxy object can be used to create a new proxy that is bound to a specific
-event loop (it works for loops both with fake- and real-world time):
+event loop (it works for loops with both fake and real-world time):
 
 .. code-block:: python
 
@@ -84,10 +84,10 @@ event loop (it works for loops both with fake- and real-world time):
         new_loop.run_until_complete(asyncio.sleep(1.23))
         assert looptime @ new_loop == 101.23
 
-Mind that it is not the same as ``Chronographer`` for the whole test.
+Keep in mind that it is not the same as :class:`Chronometer` for the whole test.
 The time proxy reflects the time of the loop, not the duration of the test:
 the loop time can start at a non-zero point; even if it starts at zero,
-the loop time also includes the time of all fixtures setups.
+the loop time also includes the time of all fixture setups.
 
 
 Custom event loops
@@ -141,7 +141,7 @@ Only selector-based event loops are supported: the event loop must rely on
 Everything that inherits from ``asyncio.BaseEventLoop`` should work.
 
 You can also patch almost any event loop class or event loop object
-the same way as ``looptime`` does that (via some dirty hackery):
+the same way as ``looptime`` does (via some dirty hackery):
 
 For ``pytest-asyncio<1.0.0``:
 
@@ -177,7 +177,7 @@ For ``pytest-asyncio>=1.0.0``:
         return LooptimeEventLoopPolicy()
 
 ``looptime.make_event_loop_class(cls)`` constructs a new class that inherits
-from the referenced class and the specialised event loop class mentioned above.
+from the referenced class and the specialized event loop class mentioned above.
 The resulting classes are cached, so it can be safely called multiple times.
 
 ``looptime.patch_event_loop()`` replaces the event loop's class with the newly
