@@ -34,6 +34,9 @@ class IdleTimeoutError(asyncio.TimeoutError):
 
 
 class LoopTimeEventLoop(asyncio.BaseEventLoop):
+    """
+    An event loop with time compaction. Either a class or a mixin.
+    """
 
     # BaseEventLoop does not have "_selector" declared but uses it in _run_once().
     _selector: selectors.BaseSelector
@@ -134,12 +137,15 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
 
     @property
     def looptime_on(self) -> bool:
+        """
+        Whether the time compaction is enabled at the moment.
+        """
         return bool(self.__enabled)
 
     @contextlib.contextmanager
     def looptime_enabled(self) -> Iterator[None]:
         """
-        Temporarily enable the time compaction, restore the normal mode on exit.
+        A context manager to temporarily enable the time compaction.
         """
         if self.__enabled:
             raise RuntimeError('Looptime mode is already enabled. Entered twice? Avoid this!')

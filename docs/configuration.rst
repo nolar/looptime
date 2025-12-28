@@ -88,7 +88,7 @@ The time zero
 ``start`` (``float`` or ``None``, or a no-argument callable that returns the same)
 is the initial time of the event loop.
 
-If it is a callable, it is invoked once per event loop to get the value:
+If it is a callable, it is invoked once per test to get the value:
 e.g., ``start=time.monotonic`` to align with the true time,
 or ``start=lambda: random.random() * 100`` to add some unpredictability.
 
@@ -134,3 +134,17 @@ e.g., ``end=lambda: time.monotonic() + 10``.
 
 The end of time is not the same as timeouts — see :doc:`nuances`
 on differences with ``async-timeout``.
+
+
+Advanced settings
+-----------------
+
+A few more settings are considered advanced and documented in :doc:`nuances`.
+They cover very nuanced aspects of the time flow, mainly synchronising across
+two timelines: fake time & real time, sync & async.
+You normally should not use them and the defaults should be fine.
+
+- ``noop_cycles``
+- ``idle_step``
+- ``idle_timeout``
+- ``resolution``

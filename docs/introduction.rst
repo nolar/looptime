@@ -38,7 +38,7 @@ Why?
 
 Without ``looptime``, the event loops use ``time.monotonic()`` for the time,
 which also captures the code overhead and the network latencies, adding small
-random fluctuations to the time measurements (approx. 0.01-0.001 seconds).
+random fluctuations to the time measurements (approx. 0.1-0.01-0.001 seconds).
 
 Without ``looptime``, the event loops spend the real wall-clock time
 when there is no I/O happening but some callbacks are scheduled for later.

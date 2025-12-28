@@ -2,8 +2,8 @@
 Nuances
 =======
 
-Preliminary execution
-=====================
+Premature finalization
+======================
 
 Consider this test:
 
@@ -21,7 +21,7 @@ Consider this test:
             await asyncio.sleep(1)
 
 Normally, it should not fail. However, with fake time (without workarounds),
-the following scenario is possible:
+the following step-by-step scenario is possible:
 
 * ``async_timeout`` library sets its delayed timer at 9 seconds from now.
 * The event loop notices that there is only one timer at T0+9s.
@@ -36,13 +36,13 @@ tasks, and handles a fair chance to be entered, spawned, and scheduled.
 This is why the example works as intended.
 
 The ``noop_cycles`` (``int``) setting is how many cycles the event loop makes.
-The default is ``42``. Why 42? Well, …
+The default is ``42``. Why 42? Well, why not, indeed.
 
 
-Slow executors
-==============
+Sync-async synchronization
+==========================
 
-Consider this test:
+Consider this test, which mixes sync & async activities & primitives:
 
 .. code-block:: python
 
@@ -112,10 +112,10 @@ of steps with no fractions: e.g., 0.01 or 0.02 seconds in this example.
 A trade-off: a smaller step will get results faster but will spend more CPU power on resultless cycles.
 
 
-I/O idle
-========
+Idle I/O activities
+===================
 
-Consider this test:
+Consider this test, which does the external I/O communication:
 
 .. code-block:: python
 
@@ -145,7 +145,8 @@ The default is ``1.0`` second.
 
 If nothing happens within this time, the event loop assumes that nothing
 will ever happen, so it is a good idea to cease its existence: it injects
-``IdleTimeoutError`` (a subclass of ``asyncio.TimeoutError``) into all tasks.
+:class:`looptime.IdleTimeoutError` (a subclass of :class:`asyncio.TimeoutError`)
+into all currently running tasks.
 
 This is similar to how the end-of-time behaves, except that it is measured
 in the true-time timeline, while the end-of-time is in the fake-time timeline.
@@ -214,8 +215,8 @@ If the async timeout is reached, further code can proceed normally.
         assert chronometer < 0.1
 
 
-Time resolution
-===============
+Time resolution & floating point precision errors
+=================================================
 
 Python (as well as many other languages) has issues with calculating floats:
 
@@ -255,8 +256,8 @@ Normally, you should not worry about it or configure it.
     everything smaller than 0.001 becomes 0 and probably misbehaves.
 
 
-Time magic coverage
-===================
+Exclusion of fixture setup/teardown
+===================================
 
 The time compaction magic is enabled only for the duration of the test,
 i.e., the test function — but not the fixtures.
@@ -284,13 +285,33 @@ plus an assumption that it was never used by anyone (it should not be).
 It was rather a side effect of the previous implementation,
 which is not available or possible anymore.
 
+If the time magic is needed in fixtures, use the more explicit approach:
+
+.. code-block:: python
+
+    import looptime
+    import pytest_async
+
+    @pytest_async.fixture
+    def async_fixture_example():
+        with looptime.enabled():
+            # Execute some async time-based code, but compacted.
+            await asyncio.sleep(1)
+
+        # Go to the test(s).
+        yield
+
+        with looptime.enabled():
+            # Execute some async time-based code, but compacted.
+            await asyncio.sleep(1)
+
 
 pytest-asyncio>=1.0.0
 =====================
 
-As mentioned above, pytest-asyncio>=1.0.0 introduced several co-existing
-event loops of different scopes. Time compaction in these event loops
-is NOT activated. Only the running loop of the test function is activated.
+pytest-asyncio>=1.0.0 introduced several co-existing event loops
+of different scopes. Time compaction in these event loops is NOT activated.
+Only the running loop of the test function is activated.
 
 Configuring and activating multiple co-existing event loops brings a few
 conceptual challenges, which require a good sample case to look into

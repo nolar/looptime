@@ -14,13 +14,18 @@ class Chronometer(math.Numeric):
 
     Usage:
 
-        with Chronometer() as chronometer:
-            do_something()
-            print(f"Executing for {chronometer.seconds}s already.")
-            do_something_else()
+    .. code-block:: python
 
-        print(f"Executed in {chronometer.seconds}s.")
-        assert chronometer.seconds < 5.0
+        import time
+
+        def test_chronometer():
+            with Chronometer() as chronometer:
+                time.sleep(1.23)  # do something slow
+                print(f"Executing for {chronometer.seconds}s already.")
+                time.sleep(2.34)  # do something slow again
+
+            print(f"Executed in {chronometer.seconds}s.")
+            assert chronometer.seconds < 5.0  # 3.57s or slightly more
     """
 
     def __init__(self, clock: Callable[[], float] = time.perf_counter) -> None:
@@ -35,6 +40,7 @@ class Chronometer(math.Numeric):
 
     @property
     def seconds(self) -> float | None:
+        """The elapsed time in seconds (fractional)."""
         if self._ts is None:
             return None
         elif self._te is None:

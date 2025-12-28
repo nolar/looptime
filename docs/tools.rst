@@ -8,7 +8,7 @@ Chronometers
 For convenience, the library also provides a class and a fixture
 to measure the duration of arbitrary code blocks in real-world time:
 
-* ``looptime.Chronometer`` (a context manager class).
+* :class:`looptime.Chronometer` (a context manager class).
 * ``chronometer`` (a pytest fixture).
 
 It can be used as a sync or async context manager:
@@ -71,8 +71,9 @@ beyond that precision is ignored — so you do not need to be afraid of
 ``123.456/1.2`` suddenly becoming ``102.88000000000001`` and not equal to ``102.88``
 (as long as the time proxy object is used and not converted to a native float).
 
-The proxy object can be used to create a new proxy that is bound to a specific
-event loop (it works for loops with both fake and real-world time):
+The proxy object can be used to create a new proxy that is bound
+to a specific event loop with the ``@`` operation
+(it works for loops with both fake and real-world time):
 
 .. code-block:: python
 
@@ -90,13 +91,13 @@ the loop time can start at a non-zero point; even if it starts at zero,
 the loop time also includes the time of all fixture setups.
 
 
-Custom event loops
-==================
+Custom event loops & mixins
+===========================
 
 Do you use a custom event loop? No problem! Create a test-specific descendant
 with the provided mixin — and it will work the same as the default event loop.
 
-For ``pytest-asyncio<1.0.0``:
+For ``pytest-asyncio<1.0.0``, use the ``event_loop`` fixture:
 
 .. code-block:: python
 
@@ -113,7 +114,7 @@ For ``pytest-asyncio<1.0.0``:
     def event_loop():
         return LooptimeCustomEventLoop()
 
-For ``pytest-asyncio>=1.0.0``:
+For ``pytest-asyncio>=1.0.0``, use the ``event_loop_policy``:
 
 .. code-block:: python
 
@@ -138,12 +139,13 @@ For ``pytest-asyncio>=1.0.0``:
 
 Only selector-based event loops are supported: the event loop must rely on
 ``self._selector.select(timeout)`` to sleep for ``timeout`` true-time seconds.
-Everything that inherits from ``asyncio.BaseEventLoop`` should work.
+Everything that inherits from ``asyncio.BaseEventLoop`` should work,
+but a more generic ``asyncio.AbstractEventLoop`` might be a problem.
 
 You can also patch almost any event loop class or event loop object
 the same way as ``looptime`` does (via some dirty hackery):
 
-For ``pytest-asyncio<1.0.0``:
+For ``pytest-asyncio<1.0.0`` and the ``even_loop`` fixture:
 
 .. code-block:: python
 
@@ -157,7 +159,7 @@ For ``pytest-asyncio<1.0.0``:
         loop = asyncio.new_event_loop()
         return looptime.patch_event_loop(loop)
 
-For ``pytest-asyncio>=1.0.0``:
+For ``pytest-asyncio>=1.0.0`` and the ``event_loop_policy`` fixture:
 
 .. code-block:: python
 
@@ -182,7 +184,9 @@ The resulting classes are cached, so it can be safely called multiple times.
 
 ``looptime.patch_event_loop()`` replaces the event loop's class with the newly
 constructed one. For those who care, it is an equivalent of the following hack
-(some restrictions apply to the derived class):
+(some restrictions apply to the derived class).
+
+In general, patching the existing event loop instance is done by this hack:
 
 .. code-block:: python
 
