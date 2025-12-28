@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, TypeVar
 
-from looptime import math
+from . import math
 
 _SelfT = TypeVar('_SelfT', bound="Chronometer")
 

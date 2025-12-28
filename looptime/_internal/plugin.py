@@ -109,13 +109,12 @@ from __future__ import annotations
 
 import asyncio
 import sys
-import warnings
 from typing import Any
 
 import _pytest.nodes
 import pytest
 
-from looptime import loops, patchers, timeproxies
+from . import loops, patchers, timeproxies
 
 
 # Critical implementation details: It MUST be sync! It CANNOT be async!

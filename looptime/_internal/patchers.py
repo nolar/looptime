@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Type, cast
 
-from looptime import loops
+from . import loops
 
 _class_cache: dict[Type[asyncio.BaseEventLoop], Type[loops.LoopTimeEventLoop]] = {}
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from looptime import math
+from . import math
 
 
 class LoopTimeProxy(math.Numeric):

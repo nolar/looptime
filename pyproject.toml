@@ -41,9 +41,9 @@ repository = "https://github.com/nolar/looptime"
 documentation = "https://github.com/nolar/looptime"
 
 [project.entry-points.pytest11]
-looptime_plugin = "looptime.plugin"
-looptime_timeproxies = "looptime.timeproxies"
-looptime_chronometers = "looptime.chronometers"
+looptime_plugin = "looptime._internal.plugin"
+looptime_timeproxies = "looptime._internal.timeproxies"
+looptime_chronometers = "looptime._internal.chronometers"
 
 [dependency-groups]
 dev = [
