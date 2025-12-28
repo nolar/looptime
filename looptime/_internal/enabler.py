@@ -4,7 +4,7 @@ import inspect
 import warnings
 from typing import Any, Callable, ContextManager, ParamSpec, TypeVar
 
-from looptime import loops
+from . import loops
 
 P = ParamSpec('P')
 R = TypeVar('R')

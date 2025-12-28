@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 
-from looptime import math
+from . import math
 
 
 class LoopTimeProxy(math.Numeric):
     """
     A numeric-compatible proxy to the time of the current/specific event loop.
+
+    It is mainly represented by the ``looptime`` fixture in pytest.
     """
 
     def __init__(

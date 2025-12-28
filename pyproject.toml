@@ -41,11 +41,16 @@ repository = "https://github.com/nolar/looptime"
 documentation = "https://github.com/nolar/looptime"
 
 [project.entry-points.pytest11]
-looptime_plugin = "looptime.plugin"
-looptime_timeproxies = "looptime.timeproxies"
-looptime_chronometers = "looptime.chronometers"
+looptime_plugin = "looptime._internal.plugin"
+looptime_timeproxies = "looptime._internal.timeproxies"
+looptime_chronometers = "looptime._internal.chronometers"
 
 [dependency-groups]
+docs = [
+    "sphinx>=9.0.0",
+    "sphinx-llm>=0.1.4",
+    "furo",
+]
 dev = [
     "async-timeout",
     "codecov",
@@ -65,3 +70,14 @@ lint = [
 
 [tool.setuptools_scm]
 version_file = "looptime/_version.py"
+
+[tool.mypy]
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.isort]
+line_length = 120
+multi_line_output = 11
+balanced_wrapping = true
+combine_as_imports = true
+case_sensitive = true
