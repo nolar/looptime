@@ -33,7 +33,7 @@ def test_execution_takes_true_time_when_disabled(chronometer, looptime_loop):
     looptime_loop.setup_looptime(_enabled=False)
     with chronometer:
         looptime_loop.run_until_complete(asyncio.sleep(1))
-    assert looptime_loop.time() == 1
+    assert -1 < looptime_loop.time() - time.monotonic() < 1  # we know that asyncio uses this clock
     assert 1 <= chronometer.seconds < 1.1
 
 

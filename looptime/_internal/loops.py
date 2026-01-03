@@ -157,7 +157,10 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
             self.__enabled = old_enabled
 
     def time(self) -> float:
-        return self.__int2time(self.__now)
+        if self.__enabled:
+            return self.__int2time(self.__now)
+        else:
+            return super().time()
 
     def run_in_executor(self, executor: Any, func: Any, *args: Any) -> AnyFuture:  # type: ignore
         future = super().run_in_executor(executor, func, *args)
