@@ -27,8 +27,8 @@ extensions = [
 
 html_theme = 'furo'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-html_static_path = []
-templates_path = []
+html_static_path = ['_static']
+templates_path = ['_templates']
 
 # -- Options for intersphinx extension ---------------------------------------
 intersphinx_mapping = {
