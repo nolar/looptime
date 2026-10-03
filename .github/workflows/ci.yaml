@@ -12,12 +12,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
       - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
-      - run: pip install --group lint -e .
-      - run: pre-commit run --all-files
-      - run: mypy
+      - run: uv sync --no-dev --group lint
+      - run: uv run --no-sync pre-commit run --all-files
+      - run: uv run --no-sync mypy
 
   unit-tests:
     strategy:
@@ -30,12 +31,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: pip install --group dev -e .
-      - run: pytest --color=yes --cov=looptime --cov-branch
+      - run: uv sync --no-dev --group test
+      - run: uv run --no-sync coverage run --branch --source=looptime -m pytest --color=yes
 
       - name: Publish coverage to Coveralls.io
         uses: coverallsapp/github-action@v2
@@ -66,12 +68,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: pip install --group dev -e .
-      - run: pytest --color=yes --no-cov
+      - run: uv sync --no-dev --group test
+      - run: uv run --no-sync pytest --color=yes --no-cov
 
   coveralls-finish:
     name: Finalize coveralls.io
