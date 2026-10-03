@@ -162,40 +162,24 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
     result = yield
 
     # Only do the magic if in the area of our interest & only for fixtures making the event loops.
-    # TODO: rewrite to simpler `if` & match-case when Python 3.10 is dropped (≈October 2026).
     should_patch = _should_patch(fixturedef, request)
-    is_loop = isinstance(result, asyncio.BaseEventLoop)
-    is_runner = False if sys.version_info < (3, 11) else isinstance(result, asyncio.Runner)
-    is_bp_runner = False if sys.version_info < (3, 11) else isinstance(result, asyncio.Runner)
-
-    # We avoid extra dependencies, but pytest-asyncio>=1.1.0 uses it, and we need to detect it.
-    # TODO: remove when Python 3.10 is dropped (≈October 2026).
-    try:
-        from backports.asyncio.runner import Runner as bp_Runner
-    except ImportError:
-        is_bp_runner = False
-    else:
-        is_bp_runner = isinstance(result, bp_Runner)
 
     # Patch the event loop at creation — even if unused and not enabled. We cannot patch later
     # in the middle of the run: e.g. for a session-scoped loop used in a few tests out of many.
     # NB: For the lowest "function" scope, we still cannot decide which options to use, since
     # we do not know yet if it will be the running loop or not — so we cannot optimize here
     # in order to patch-and-configure only once; we must patch here & configure+activate later.
-    if should_patch and (is_loop or is_runner or is_bp_runner):
-        if isinstance(result, asyncio.BaseEventLoop):
-            patchers.patch_event_loop(result, _enabled=False)
-        elif sys.version_info >= (3, 11) and isinstance(result, asyncio.Runner):
-            # Available only in python>=3.11, but mandatory for python>=3.14.
-            # The runner of pytest-asyncio is already entered, which means the loop is created.
-            # Even if not created, we cannot postpone the loop creation, so we create it here.
-            loop = result.get_loop()
-            if isinstance(loop, asyncio.BaseEventLoop):
-                patchers.patch_event_loop(loop, _enabled=False)
-        elif is_bp_runner:  # TODO: drop this branch with Python 3.10
-            loop = result.get_loop()
-            if isinstance(loop, asyncio.BaseEventLoop):
-                patchers.patch_event_loop(loop, _enabled=False)
+    if should_patch:
+        match result:
+            case asyncio.BaseEventLoop():
+                patchers.patch_event_loop(result, _enabled=False)
+            case asyncio.Runner():
+                # Available only in python>=3.11, but mandatory for python>=3.14.
+                # The runner of pytest-asyncio is already entered, which means the loop is created.
+                # Even if not created, we cannot postpone the loop creation, so we create it here.
+                loop = result.get_loop()
+                if isinstance(loop, asyncio.BaseEventLoop):
+                    patchers.patch_event_loop(loop, _enabled=False)
 
     return result
 
