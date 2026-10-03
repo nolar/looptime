@@ -9,11 +9,11 @@ on:
 jobs:
   linters:
     name: Linting and static analysis
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
       - run: pip install --group lint -e .
@@ -24,15 +24,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
-        include:
-          - python-version: "3.14"
+        # Assumption: if free-threaded works in one version, it works in all versions.
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t" ]
     name: Python ${{ matrix.python-version }}${{ matrix.install-extras && ', ' || '' }}${{ matrix.install-extras }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -62,13 +61,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "pypy-3.10", "pypy-3.11" ]
+        python-version: [ "pypy-3.10", "pypy-3.11", "pypy-3.12" ]
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -78,9 +77,9 @@ jobs:
   coveralls-finish:
     name: Finalize coveralls.io
     needs: [unit-tests]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
       - run: pip install coveralls
       - run: coveralls --service=github --finish
         env:

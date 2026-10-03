@@ -63,7 +63,7 @@ dev = [
 ]
 lint = [
     {include-group = "dev"},
-    "mypy==1.19.0",
+    "mypy==2.3.1",
     "pre-commit",
     "isort",
 ]
