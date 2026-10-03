@@ -20,7 +20,7 @@ jobs:
           python-version: "3.14"
       - run: pip install --group dev --group lint -e .
       - run: pre-commit run --all-files
-      - run: mypy looptime --strict
+      - run: mypy
 
   unit-tests:
     strategy:

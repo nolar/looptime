@@ -71,6 +71,11 @@ lint = [
 version_file = "looptime/_version.py"
 
 [tool.mypy]
+strict = true
+packages = ["looptime"]
+exclude = ['(^|/)test_.*\.py$']
+python_version = "3.11"
+exclude_gitignore = true
 warn_unused_configs = true
 ignore_missing_imports = true
 
