@@ -25,7 +25,7 @@ jobs:
       matrix:
         # Assumption: if free-threaded works in one version, it works in all versions.
         python-version: [ "3.11", "3.12", "3.13", "3.14", "3.14t" ]
-    name: Python ${{ matrix.python-version }}${{ matrix.install-extras && ', ' || '' }}${{ matrix.install-extras }}
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
@@ -35,8 +35,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - run: pip install --group dev -e .
-      - run: pip install "${{ matrix.install-extras }}"
-        if: ${{ matrix.install-extras }}
       - run: pytest --color=yes --cov=looptime --cov-branch
 
       - name: Publish coverage to Coveralls.io
