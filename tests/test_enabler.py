@@ -51,7 +51,6 @@ async def test_enabler_as_decorator_for_async_functions():
     assert enabled
 
 
-@pytest.mark.skipif(sys.version_info < (3, 11), reason="Runners require Python>=3.11")
 def test_enabler_with_explicit_loop():
     with asyncio.Runner() as runner:
         runner_loop = runner.get_loop()
@@ -61,7 +60,6 @@ def test_enabler_with_explicit_loop():
     assert enabled
 
 
-@pytest.mark.skipif(sys.version_info < (3, 11), reason="Runners require Python>=3.11")
 def test_strict_mode_error():
     with asyncio.Runner() as runner:
         runner_loop = runner.get_loop()  # unpatched!
@@ -70,7 +68,6 @@ def test_strict_mode_error():
                 pass
 
 
-@pytest.mark.skipif(sys.version_info < (3, 11), reason="Runners require Python>=3.11")
 def test_nonstrict_mode_warning():
     with asyncio.Runner() as runner:
         runner_loop = runner.get_loop()  # unpatched!

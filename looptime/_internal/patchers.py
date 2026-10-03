@@ -5,7 +5,7 @@ from typing import Any, Type, cast
 
 from . import loops
 
-_class_cache: dict[Type[asyncio.BaseEventLoop], Type[loops.LoopTimeEventLoop]] = {}
+_class_cache: dict[type[asyncio.BaseEventLoop], type[loops.LoopTimeEventLoop]] = {}
 
 
 def reset_caches() -> None:
@@ -19,10 +19,10 @@ def reset_caches() -> None:
 
 
 def make_event_loop_class(
-        cls: Type[asyncio.BaseEventLoop],
+        cls: type[asyncio.BaseEventLoop],
         *,
         prefix: str = 'Looptime',
-) -> Type[loops.LoopTimeEventLoop]:
+) -> type[loops.LoopTimeEventLoop]:
     """
     Create a new looptime-enabled event loop class from the original class.
 
