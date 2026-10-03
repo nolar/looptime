@@ -9,7 +9,7 @@ on:
 jobs:
   linters:
     name: Linting and static analysis
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
@@ -28,7 +28,7 @@ jobs:
         include:
           - python-version: "3.14"
     name: Python ${{ matrix.python-version }}${{ matrix.install-extras && ', ' || '' }}${{ matrix.install-extras }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
@@ -64,7 +64,7 @@ jobs:
       matrix:
         python-version: [ "pypy-3.10", "pypy-3.11" ]
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
@@ -78,7 +78,7 @@ jobs:
   coveralls-finish:
     name: Finalize coveralls.io
     needs: [unit-tests]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/setup-python@v6
       - run: pip install coveralls
