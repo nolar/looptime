@@ -13,12 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
-      - uses: actions/setup-python@v7
         with:
+          github-token: ${{ github.token }}
+          enable-cache: true
           python-version: "3.14"
+          activate-environment: true
       - run: uv sync --no-dev --group lint
-      - run: uv run --no-sync pre-commit run --all-files
-      - run: uv run --no-sync mypy
+      - run: pre-commit run --all-files
+      - run: mypy
 
   unit-tests:
     strategy:
@@ -32,12 +34,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
-      - uses: actions/setup-python@v7
         with:
+          github-token: ${{ github.token }}
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
-
+          activate-environment: true
       - run: uv sync --no-dev --group test
-      - run: uv run --no-sync coverage run --branch --source=looptime -m pytest --color=yes
+      - run: coverage run --branch --source=looptime -m pytest --color=yes
 
       - name: Publish coverage to Coveralls.io
         uses: coverallsapp/github-action@v2
@@ -69,12 +72,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
-      - uses: actions/setup-python@v7
         with:
+          github-token: ${{ github.token }}
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
-
+          activate-environment: true
       - run: uv sync --no-dev --group test
-      - run: uv run --no-sync pytest --color=yes --no-cov
+      - run: pytest --color=yes --no-cov
 
   coveralls-finish:
     name: Finalize coveralls.io
