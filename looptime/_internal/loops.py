@@ -6,7 +6,8 @@ import selectors
 import time
 import warnings
 import weakref
-from typing import TYPE_CHECKING, Any, Callable, Iterator, MutableSet, TypeVar, cast, overload
+from collections.abc import Callable, Iterator, MutableSet
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 _T = TypeVar('_T')
 

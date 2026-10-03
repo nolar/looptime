@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, Self
 
 from . import math
-
-_SelfT = TypeVar('_SelfT', bound="Chronometer")
 
 
 class Chronometer(math.Numeric):
@@ -52,7 +51,7 @@ class Chronometer(math.Numeric):
         status = 'new' if self._ts is None else 'running' if self._te is None else 'finished'
         return f'<Chronometer: {self.seconds}s ({status})>'
 
-    def __enter__(self: _SelfT) -> _SelfT:
+    def __enter__(self) -> Self:
         self._ts = self._clock()
         self._te = None
         return self
@@ -60,7 +59,7 @@ class Chronometer(math.Numeric):
     def __exit__(self, *args: Any) -> None:
         self._te = self._clock()
 
-    async def __aenter__(self: _SelfT) -> _SelfT:
+    async def __aenter__(self) -> Self:
         return self.__enter__()
 
     async def __aexit__(self, *args: Any) -> None:

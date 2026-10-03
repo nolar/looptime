@@ -2,7 +2,8 @@ import asyncio
 import functools
 import inspect
 import warnings
-from typing import Any, Callable, ContextManager, ParamSpec, TypeVar
+from collections.abc import Callable
+from typing import Any, ContextManager, ParamSpec, TypeVar
 
 from . import loops
 
