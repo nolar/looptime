@@ -38,19 +38,21 @@ jobs:
       - run: pytest --color=yes --cov=looptime --cov-branch
 
       - name: Publish coverage to Coveralls.io
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel: true
+          flag-name: ${{ matrix.python-version }}
         if: success()
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-        continue-on-error: true
+        continue-on-error: true  # tends to fail with no code changes (e.g. only CI/docs)
       - name: Publish coverage to CodeCov.io
-        uses: codecov/codecov-action@v3
-        if: success()
+        uses: codecov/codecov-action@v7
         env:
           PYTHON: ${{ matrix.python-version }}
         with:
           flags: unit
           env_vars: PYTHON
+          token: ${{ secrets.CODECOV_TOKEN }}
+        if: success()
         continue-on-error: true
 
   # No coverage: PyPy performs extremely poorly with tracing/coverage.
@@ -76,9 +78,7 @@ jobs:
     needs: [unit-tests]
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/setup-python@v7
-      - run: pip install coveralls
-      - run: coveralls --service=github --finish
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-        continue-on-error: true
+      - name: Finish coverage at Coveralls.io
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
