@@ -10,8 +10,13 @@ supported. For example, use `pytest-asyncio <https://github.com/pytest-dev/pytes
 
 .. code-block:: bash
 
-    pip install pytest-asyncio
-    pip install looptime
+    pip install pytest-asyncio looptime
+
+With ``uv``:
+
+.. code-block::
+
+    uv add pytest-asyncio looptime
 
 
 Activation from CLI
