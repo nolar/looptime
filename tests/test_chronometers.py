@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import time
 
 import pytest
@@ -48,6 +49,37 @@ async def test_async_context_manager():
     async with looptime.Chronometer() as chronometer:
         time.sleep(0.1)
     assert 0.1 <= chronometer.seconds < 0.11
+
+
+def test_gc_preserved_when_requested():
+    gc.enable()
+    with looptime.Chronometer(keep_gc=True):
+        assert gc.isenabled()
+    assert gc.isenabled()
+
+
+def test_gc_disabled_by_default():
+    gc.enable()
+    with looptime.Chronometer():
+        assert not gc.isenabled()  # temporarily disabled
+    assert gc.isenabled()  # restored
+
+
+def test_nested_gc_remains_on_exits():
+    gc.enable()
+    with looptime.Chronometer():
+        with looptime.Chronometer():
+            assert not gc.isenabled()  # temporarily disabled
+        assert not gc.isenabled()  # not restored yet
+    assert gc.isenabled()  # restored
+
+
+def test_gc_off_remains_unaffected():
+    gc.disable()
+    with looptime.Chronometer():
+        assert not gc.isenabled()  # temporarily disabled
+    assert not gc.isenabled()  # kept disabled, not re-enabled
+    gc.enable()  # put it back for other tests
 
 
 @pytest.mark.asyncio
