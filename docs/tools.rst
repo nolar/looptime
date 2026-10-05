@@ -11,6 +11,9 @@ to measure the duration of arbitrary code blocks in real-world time:
 * :class:`looptime.Chronometer` (a context manager class).
 * ``chronometer`` (a pytest fixture).
 
+Pytest fixture
+--------------
+
 It can be used as a sync or async context manager:
 
 .. code-block:: python
@@ -26,6 +29,13 @@ It can be used as a sync or async context manager:
             await asyncio.sleep(1)
         assert chronometer.seconds < 0.01  # random code overhead
 
+Asyncio event loop timing
+-------------------------
+
+The default clock is :func:`time.perf_counter`, i.e., the real-clock time.
+Other clocks can be passed as a positional argument;
+it must a function with no arguments returning a ``float`` or ``int``.
+
 Usually, the loop-time duration is not needed or can be retrieved via
 ``asyncio.get_running_loop().time()``. If needed, it can be measured using
 the provided context manager class with the event loop's clock:
@@ -38,13 +48,37 @@ the provided context manager class with the event loop's clock:
 
     @pytest.mark.asyncio
     @pytest.mark.looptime(start=100)
-    async def test_me(chronometer, event_loop):
-        with chronometer, looptime.Chronometer(event_loop.time) as loopometer:
+    async def test_me(chronometer):
+        with chronometer, looptime.Chronometer(asyncio.get_running_loop().time) as loopometer:
             await asyncio.sleep(1)
             await asyncio.sleep(1)
         assert chronometer.seconds < 0.01  # random code overhead
         assert loopometer.seconds == 2  # precise timing, no code overhead
-        assert event_loop.time() == 102
+        assert asyncio.get_running_loop().time() == 102
+
+
+Garbage collection overhead
+---------------------------
+
+Normally (``keep_gc=False``, the default), the chronometer disables
+the automatic garbage collection for the duration of the time measurements,
+in order to prevent extra time spent on the unexpected garbage collection.
+With ``keep_gc=True``, the chronometer leaves the garbage collection intact.
+At exit, the garbage collection is restored to the original state.
+As a result, in nested chronometers, the outer one controls the gc.
+
+.. code-block:: python
+
+    import gc
+    import looptime
+
+    async def test_gc_disabled():
+        with looptime.Chronometer() as chronometer:
+            assert not gc.isenabled()  # expect no gc happening here
+
+    async def test_gc_preserved():
+        with looptime.Chronometer(keep_gc=True) as chronometer:
+            assert gc.isenabled()  # expect gc possibly happening here
 
 
 Assertions
