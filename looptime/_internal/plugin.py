@@ -108,7 +108,6 @@ We then apply the options, and activate the pre-patched running event loop.
 from __future__ import annotations
 
 import asyncio
-import sys
 from typing import Any
 
 import _pytest.nodes
