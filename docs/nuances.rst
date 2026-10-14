@@ -237,7 +237,12 @@ Time arguments are converted to the internal integer form
 and back to the floating-point form when needed.
 
 The ``resolution`` (``float``) setting is the minimum supported time step.
-All time steps smaller than that are rounded to the nearest value.
+All time steps smaller than that are rounded to the nearest higher value,
+i.e., they make an extra tick of the clock. This is needed to avoid looptime
+freezing forever in a loop caused by asyncio sleeps below the resolution,
+which would otherwise (no extra tick) cause the clock moving by 0 ticks,
+thus never satisfying the asyncio's logic of reaching the target time,
+which does the math in floating point values.
 
 The default is 1 microsecond, i.e., ``0.000001`` (``1e-6``), which is good enough
 for typical unit-tests while keeping the integers smaller than 32 bits

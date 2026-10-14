@@ -340,6 +340,18 @@ class LoopTimeEventLoop(asyncio.BaseEventLoop):
                 overtime = True
                 real_step = self.__end - self.__now
 
+        # If the original timeout is truly smaller than the resolution, add 1x clock tick.
+        # If bigger, assume it is a floating point precision error in asyncio and will be gone.
+        # But do not ceil() the time! This will expose the floating point precision errors as ticks.
+        # In particular, issue #35: asyncio.sleep(1e-7) could freeze forever,
+        # since we moved the integer clock by 0 ticks (round(1e-7/resolution)=round(0.1)=0),
+        # but asyncio.BaseLoop._run_once() slept for the remaining time in floating point math,
+        # and therefore could not reach its own target time to stop properly.
+        if not overtime:
+            if real_step is not None and timeout is not None:
+                if 0 < timeout < self.__int2time(1):
+                    real_step += 1
+
         # Normally, the real-clock step is the same as the loop-time step.
         real_timeout = self.__int2time(real_step)
 
