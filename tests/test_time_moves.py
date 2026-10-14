@@ -163,3 +163,13 @@ def test_backward_time_moves_raises_and_keeps_the_time(looptime_loop):
             warnings.filterwarnings('error', category=looptime.TimeWarning)
             looptime_loop.setup_looptime(start=123)
     assert looptime_loop.time() == 456  # unmodified
+
+
+# Issue #35: freezes forever with certain sleeps below resolution.
+@pytest.mark.parametrize('sleep', [
+    0.0000001,
+    1.0000001,
+])
+def test_timeouts_below_resolution(looptime_loop, sleep):
+    looptime_loop.setup_looptime(resolution=1e-6)  # the same as in asyncio.BaseLoop._run_once()
+    looptime_loop.run_until_complete(asyncio.sleep(sleep))
